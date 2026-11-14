@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 600" width="1024" height="600">
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#05141c"/>
+      <stop offset="60%" stop-color="#0a2a3b"/>
+      <stop offset="100%" stop-color="#02090d"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="600" fill="url(#bg3)"/>
+  <rect x="60" y="45" width="220" height="34" rx="17" fill="rgba(0,240,255,0.15)" stroke="#00f0ff" stroke-width="1.5"/>
+  <text x="80" y="67" fill="#00f0ff" font-family="'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="bold">ACOUSTIC AUDIO</text>
+  
+  <text x="60" y="140" fill="#ffffff" font-family="'Segoe UI', Roboto, sans-serif" font-size="44" font-weight="900">AEROPULSE HYBRID ANC</text>
+  <text x="60" y="190" fill="#00f0ff" font-family="'Segoe UI', Roboto, sans-serif" font-size="32" font-weight="800">45-Hour Battery • Studio Sound</text>
+  <text x="60" y="240" fill="#a0aec0" font-family="'Segoe UI', Roboto, sans-serif" font-size="18">Block outside campus noise and focus with 40mm Beryllium acoustic drivers.</text>
+  
+  <g transform="translate(60, 280)">
+    <rect width="480" height="180" rx="12" fill="rgba(255,255,255,0.03)" stroke="rgba(0,240,255,0.3)"/>
+    <text x="30" y="45" fill="#00f0ff" font-family="'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="600">🎧 -38dB Hybrid Active Noise Cancellation</text>
+    <text x="30" y="85" fill="#00f0ff" font-family="'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="600">🔋 45 Hours Playback (Fast 10-Min Charge = 5 Hrs)</text>
+    <text x="30" y="125" fill="#00f0ff" font-family="'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="600">🎙️ Quad-Microphone Beamforming ENC for Calls</text>
+    <text x="30" y="160" fill="#ffd200" font-family="'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="900">PRICE: ₹12,499</text>
+  </g>
+
+  <!-- Headphones Graphic -->
+  <g transform="translate(700, 210)">
+    <path d="M 0 120 A 90 90 0 0 1 180 120" fill="none" stroke="#00f0ff" stroke-width="14" stroke-linecap="round"/>
+    <rect x="-15" y="110" width="30" height="70" rx="15" fill="#ffffff"/>
+    <rect x="165" y="110" width="30" height="70" rx="15" fill="#ffffff"/>
+    <circle cx="90" cy="180" r="10" fill="#00f0ff"/>
+  </g>
+  
+  <rect x="60" y="505" width="904" height="55" rx="10" fill="#ffd200"/>
+  <text x="85" y="539" fill="#000000" font-family="'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="900">FESTIVE DISCOUNT: Flat 20% Instant Off Available This Week Only!</text>
+</svg>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Public Advertisement Kiosk | NTTF Mechatronics</title>
+  <link rel="stylesheet" href="src/styles.css">
+  <style>
+    /* Fullscreen Kiosk specific styling */
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 80% 20%, #09172e 0%, #03060d 70%);
+    }
+  </style>
+</head>
+<body class="kiosk-body">
+
+  <!-- Kiosk Top Navigation Bar -->
+  <header class="kiosk-header">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <div class="logo-badge" style="width: 32px; height: 32px; font-size: 14px;">🤖</div>
+      <div>
+        <h1 style="font-size: 15px; font-weight: 800; color: #fff;" data-i18n="collegeName">Autonomous AI Robot</h1>
+        <span style="font-size: 11px; color: var(--cyan-primary);" data-i18n="deptName">Smart Advertising System</span>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <!-- AI Voice Assistant Availability Pill -->
+      <div class="status-pill" style="border-color: rgba(0, 240, 255, 0.4); background: rgba(0, 240, 255, 0.08);">
+        <span style="color: var(--cyan-primary); font-size: 14px;">🎙️</span>
+        <span style="color: #fff; font-size: 12px; font-weight: 600;" data-i18n="aiListening">Say "Hey Robot" to ask any question</span>
+      </div>
+
+      <!-- Robot Hardware Status Pill -->
+      <div id="robot-status-badge" class="status-pill">
+        <span id="robot-status-dot" class="status-dot offline"></span>
+        <span id="robot-status-text" data-i18n="robotStatus">Robot Status</span>
+      </div>
+
+      <!-- Bilingual Language Toggle Button -->
+      <button id="btn-lang-toggle" class="btn btn-secondary btn-sm" style="border-radius: var(--radius-full); padding: 6px 14px; font-weight: bold;">
+        🌐 <span data-i18n="switchLanguage">മലയാളം</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Kiosk Main Presentation Area -->
+  <main class="kiosk-main">
+    <!-- Left Column: Large Advertisement Poster -->
+    <div class="kiosk-poster-col">
+      <img id="kiosk-poster" class="kiosk-poster-img" src="/assets/ads/nttf_mechatronics.svg" alt="Active Advertisement Poster">
+    </div>
+
+    <!-- Right Column: Product Information & Live Highlights -->
+    <div class="kiosk-info-col">
+      <span id="kiosk-category" class="kiosk-badge">College / Education</span>
+      <h2 id="kiosk-title" class="kiosk-title">NTTF Technical Training Centre</h2>
+      <div id="kiosk-price" class="kiosk-price-tag">₹75,000</div>
+      <p id="kiosk-desc" class="kiosk-desc">
+        Join the premier Diploma in Mechatronics Engineering. Hands-on training in Robotics, Embedded IoT, PLC Automation, and guaranteed industrial placement.
+      </p>
+
+      <ul id="kiosk-features" class="kiosk-features-list">
+        <li>Hands-on Industrial Robotics &amp; AGV Labs</li>
+        <li>Dual Core ESP32-S3 &amp; Embedded AI Architecture</li>
+        <li>100% Practical Industry-Aligned Curriculum</li>
+        <li>Over 95% Verified Campus Placements</li>
+      </ul>
+
+      <div id="kiosk-promo" style="display: block; padding: 12px 18px; background: rgba(255, 210, 0, 0.1); border: 1px solid #ffd200; border-radius: var(--radius-md); color: #ffd200; font-weight: 700; font-size: 15px;">
+        🎁 Early bird scholarship of ₹10,000 for top entrance rankers.
+      </div>
+    </div>
+  </main>
+
+  <!-- Kiosk Bottom Status Ticker -->
+  <footer class="kiosk-footer-ticker">
+    <div style="display: flex; gap: 20px; align-items: center;">
+      <span style="color: var(--cyan-primary); font-weight: 700;">📡 BROADCAST KIOSK</span>
+      <span style="color: var(--text-dim);">|</span>
+      <span>Live Display Synchronized with Robot 10-Inch DWIN HMI Screen</span>
+    </div>
+    <div>
+      <span style="font-size: 12px; color: var(--text-dim);">Autonomous AI Advertisement Robot © 2026</span>
+    </div>
+  </footer>
+
+  <script type="module" src="src/kiosk.js"></script>
+</body>
+</html>

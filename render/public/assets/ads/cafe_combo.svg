@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 600" width="1024" height="600">
+  <defs>
+    <linearGradient id="bg5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1f0e02"/>
+      <stop offset="60%" stop-color="#3b1d07"/>
+      <stop offset="100%" stop-color="#120801"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="600" fill="url(#bg5)"/>
+  <rect x="60" y="45" width="220" height="34" rx="17" fill="rgba(255,165,0,0.2)" stroke="#ffa500" stroke-width="1.5"/>
+  <text x="80" y="67" fill="#ffd200" font-family="'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="bold">CAMPUS BISTRO</text>
+  
+  <text x="60" y="140" fill="#ffffff" font-family="'Segoe UI', Roboto, sans-serif" font-size="44" font-weight="900">CAMPUS FRESH CAFE COMBO</text>
+  <text x="60" y="190" fill="#ffa500" font-family="'Segoe UI', Roboto, sans-serif" font-size="32" font-weight="800">Fresh Arabica Coffee &amp; Artisan Snack</text>
+  <text x="60" y="240" fill="#a0aec0" font-family="'Segoe UI', Roboto, sans-serif" font-size="18">Fuel your study sessions with freshly brewed 100% Arabica roast and warm baked delicacies.</text>
+  
+  <g transform="translate(60, 280)">
+    <rect width="480" height="180" rx="12" fill="rgba(255,255,255,0.03)" stroke="rgba(255,165,0,0.3)"/>
+    <text x="30" y="45" fill="#ffa500" font-family="'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="600">☕ Single-Origin 100% Arabica Beans</text>
+    <text x="30" y="85" fill="#ffa500" font-family="'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="600">🥐 Fresh Daily Artisan Croissant or Burger</text>
+    <text x="30" y="125" fill="#ffa500" font-family="'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="600">⚡ Prepared in Under 5 Minutes</text>
+    <text x="30" y="160" fill="#ffd200" font-family="'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="900">SPECIAL COMBO: ONLY ₹199</text>
+  </g>
+
+  <!-- Coffee cup silhouette -->
+  <g transform="translate(700, 210)">
+    <path d="M 30 50 L 150 50 L 135 150 L 45 150 Z" fill="#ffffff" stroke="#ffa500" stroke-width="4"/>
+    <path d="M 145 70 C 180 70 180 120 140 120" fill="none" stroke="#ffa500" stroke-width="6"/>
+    <path d="M 60 40 Q 75 10 90 40" fill="none" stroke="#ffa500" stroke-width="3"/>
+    <path d="M 90 40 Q 105 10 120 40" fill="none" stroke="#ffa500" stroke-width="3"/>
+    <text x="50" y="190" fill="#ffa500" font-size="16" font-weight="bold">HOT &amp; FRESH</text>
+  </g>
+  
+  <rect x="60" y="505" width="904" height="55" rx="10" fill="#ffa500"/>
+  <text x="85" y="539" fill="#000000" font-family="'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="900">COLLEGE OFFER: Present Your Student ID Card for Flat 15% Additional Discount!</text>
+</svg>

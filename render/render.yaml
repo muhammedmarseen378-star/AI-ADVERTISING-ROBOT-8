@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: ai-advertising-robot
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install --production
+    startCommand: node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 20.10.0
+      - key: ADMIN_EMAIL
+        value: nttf.ttc.m3b.group1.project@gmail.com
+      - key: TIMEZONE
+        value: Asia/Kolkata
+      - key: PORT
+        value: 10000

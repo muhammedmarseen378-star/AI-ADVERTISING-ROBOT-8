@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | AI Advertisement Robot</title>
+  <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+
+  <div class="admin-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-badge">🤖</div>
+        <div class="logo-text">
+          <h2>AD ROBOT</h2>
+          <span>ENTERPRISE AI</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-group-title">Dashboard</div>
+        <a class="nav-link active" data-section="overview">
+          <span class="nav-icon">📊</span>
+          <span>Overview</span>
+        </a>
+
+        <div class="nav-group-title">Advertisement</div>
+        <a class="nav-link" data-section="products">
+          <span class="nav-icon">📦</span>
+          <span>Products</span>
+        </a>
+        <a class="nav-link" data-section="advertisements">
+          <span class="nav-icon">📢</span>
+          <span>Advertisements</span>
+        </a>
+        <a class="nav-link" data-section="schedule">
+          <span class="nav-icon">⏱️</span>
+          <span>Schedule</span>
+        </a>
+        <a class="nav-link" data-section="ad-history">
+          <span class="nav-icon">📜</span>
+          <span>Ad History</span>
+        </a>
+
+        <div class="nav-group-title">Robot Control</div>
+        <a class="nav-link" data-section="robot-monitoring">
+          <span class="nav-icon">🛰️</span>
+          <span>Robot Telemetry</span>
+        </a>
+        <a class="nav-link" data-section="camera-monitoring">
+          <span class="nav-icon">📷</span>
+          <span>Camera Vision</span>
+        </a>
+        <a class="nav-link" data-section="manual-control">
+          <span class="nav-icon">🎮</span>
+          <span>Manual Control</span>
+        </a>
+
+        <div class="nav-group-title">Artificial Intelligence</div>
+        <a class="nav-link" data-section="grok-config">
+          <span class="nav-icon">⚡</span>
+          <span>Grok AI Config</span>
+        </a>
+        <a class="nav-link" data-section="voice-assistant">
+          <span class="nav-icon">🎙️</span>
+          <span>Voice Assistant</span>
+        </a>
+
+        <div class="nav-group-title">System</div>
+        <a class="nav-link" data-section="logs">
+          <span class="nav-icon">📋</span>
+          <span>Activity Logs</span>
+        </a>
+        <a class="nav-link" id="btn-logout">
+          <span class="nav-icon">🚪</span>
+          <span>Sign Out</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div>Admin: <strong style="color:var(--cyan-primary);">Superadmin</strong></div>
+        <div>Firmware: v1.0.0 (SevenSemi)</div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <div class="main-wrapper">
+      <!-- Top Header Bar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <h2 class="topbar-title">Mechatronics Control Console</h2>
+        </div>
+
+        <div class="topbar-right">
+          <!-- Robot Connection Status Indicator -->
+          <div class="status-pill">
+            <span id="top-robot-dot" class="status-dot offline"></span>
+            <span id="top-robot-text">Checking Robot...</span>
+          </div>
+
+          <!-- Kiosk Shortcut -->
+          <a href="kiosk.html" target="_blank" class="btn btn-secondary btn-sm">
+            📺 View Live Kiosk
+          </a>
+
+          <!-- Prominent Emergency Stop Button -->
+          <button class="btn btn-estop trigger-estop">
+            🛑 EMERGENCY STOP
+          </button>
+        </div>
+      </header>
+
+      <!-- Content Area -->
+      <main class="content-area">
+        <!-- Critical Emergency Stop Active Banner (Hidden by default) -->
+        <div id="global-estop-banner" class="estop-banner" style="display: none;">
+          <div>
+            <strong>⚠️ EMERGENCY STOP ACTIVE:</strong>
+            <span>All motors halted and manual movement locked. Click reset to restore normal operation.</span>
+          </div>
+          <button id="btn-reset-estop" class="btn btn-secondary btn-sm" style="background:#fff; color:#b71c1c; font-weight:800;">
+            Reset Emergency Stop
+          </button>
+        </div>
+
+        <!-- SECTION 1: OVERVIEW -->
+        <section id="section-overview" class="dashboard-section">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span class="stat-label">Total Products</span>
+              <span id="stat-total-products" class="stat-value">5</span>
+              <span class="stat-subtext">Catalog items stored in D1</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Active Broadcast</span>
+              <span id="stat-active-ads" class="stat-value">1</span>
+              <span class="stat-subtext">Currently on DWIN &amp; Kiosk</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Total Advertisements</span>
+              <span id="stat-total-ads" class="stat-value">5</span>
+              <span class="stat-subtext">Scheduled rotation library</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Customer Queries</span>
+              <span id="stat-questions" class="stat-value">0</span>
+              <span class="stat-subtext">Voice interactions answered</span>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+            <!-- Live Robot State Telemetry -->
+            <div class="panel-card">
+              <div class="panel-header">
+                <h3 class="panel-title">🛰️ Live Telemetry Readout</h3>
+                <span class="status-pill online">Polling (3s)</span>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                <div class="stat-card" style="padding:14px;">
+                  <span class="stat-label">Front Obstacle</span>
+                  <span id="telem-distance" style="font-size:20px; font-weight:700; color:#fff;">-- cm</span>
+                  <small style="color:var(--text-dim);">HC-SR04 Sensor</small>
+                </div>
+                <div class="stat-card" style="padding:14px;">
+                  <span class="stat-label">Motor State</span>
+                  <span id="telem-motor" style="font-size:20px; font-weight:700; color:#fff;">STOPPED</span>
+                  <small style="color:var(--text-dim);">Dual BTS7960</small>
+                </div>
+                <div class="stat-card" style="padding:14px;">
+                  <span class="stat-label">Vision Target</span>
+                  <span id="telem-person" style="font-size:20px; font-weight:700; color:#fff;">None</span>
+                  <small style="color:var(--text-dim);">ESP32-S3 Camera</small>
+                </div>
+                <div class="stat-card" style="padding:14px;">
+                  <span class="stat-label">Operating Mode</span>
+                  <span id="telem-mode" style="font-size:20px; font-weight:700; color:#fff;">MANUAL</span>
+                  <small style="color:var(--text-dim);">Control State</small>
+                </div>
+                <div class="stat-card" style="padding:14px;">
+                  <span class="stat-label">Wi-Fi Signal</span>
+                  <span id="telem-wifi" style="font-size:20px; font-weight:700; color:#fff;">Connected</span>
+                  <small style="color:var(--text-dim);">2.4GHz RSSI</small>
+                </div>
+                <div class="stat-card" style="padding:14px;">
+                  <span class="stat-label">Power Rail</span>
+                  <span id="telem-battery" style="font-size:18px; font-weight:700; color:#fff;">12V LiFePO4</span>
+                  <small style="color:var(--text-dim);">Main Battery Bus</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Action Panel -->
+            <div class="panel-card">
+              <div class="panel-header">
+                <h3 class="panel-title">⚡ Quick Controls</h3>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:12px;">
+                <button class="btn btn-secondary" onclick="switchSection('manual-control')">
+                  🎮 Open Robot D-Pad
+                </button>
+                <button class="btn btn-secondary" onclick="switchSection('products')">
+                  ✨ Grok AI Product Research
+                </button>
+                <button class="btn btn-secondary" onclick="switchSection('advertisements')">
+                  📢 Manage Ad Broadcasts
+                </button>
+                <button class="btn btn-danger trigger-estop" style="margin-top:10px;">
+                  🛑 Full Emergency Halt
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 2: PRODUCT MANAGEMENT -->
+        <section id="section-products" class="dashboard-section" style="display: none;">
+          <div class="panel-card">
+            <div class="panel-header">
+              <h3 class="panel-title">📦 Product Catalog Management</h3>
+              <div style="display: flex; gap: 12px;">
+                <input type="text" id="search-product" class="form-control" placeholder="Search products..." style="width: 220px;" oninput="loadProducts()">
+                <select id="filter-category" class="form-control" style="width: 180px;" onchange="loadProducts()">
+                  <option value="">All Categories</option>
+                </select>
+                <button id="btn-new-product" class="btn btn-primary">+ Add Product</button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Product &amp; Brand</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>Description</th>
+                    <th>Stock Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="products-table-body">
+                  <!-- Injected via JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 3: ADVERTISEMENTS -->
+        <section id="section-advertisements" class="dashboard-section" style="display: none;">
+          <div class="panel-card">
+            <div class="panel-header">
+              <h3 class="panel-title">📢 Advertisement Rotations</h3>
+              <button class="btn btn-primary" onclick="alert('Use Add Product & Play Now to create ad instances.')">+ Create Advertisement</button>
+            </div>
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Ad Title</th>
+                    <th>Linked Product</th>
+                    <th>DWIN Screen</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="ads-table-body">
+                  <!-- Injected via JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 4: GROK AI CONFIGURATION -->
+        <section id="section-grok-config" class="dashboard-section" style="display: none;">
+          <div class="panel-card" style="max-width: 800px; margin: 0 auto;">
+            <div class="panel-header">
+              <h3 class="panel-title">⚡ xAI Grok API Configuration</h3>
+              <span id="grok-status-badge" class="status-pill offline">No Key</span>
+            </div>
+
+            <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px; margin-bottom: 24px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <strong style="color:#fff;">Active Grok API Key:</strong>
+                  <div id="grok-masked-key" style="font-family:monospace; font-size:15px; color:var(--cyan-primary); margin-top:4px;">
+                    Not configured
+                  </div>
+                </div>
+                <div>
+                  <small style="color:var(--text-dim);">Last Verified:</small><br>
+                  <span id="grok-last-tested" style="font-size:12px; color:var(--text-muted);">Never</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Enter New or Replacement Grok API Key</label>
+              <input type="password" id="grok-api-key-input" class="form-control" placeholder="xai-••••••••••••••••••••••••••••••••">
+              <small style="color:var(--text-dim); font-size:11px;">
+                Credentials are validated against the official xAI API before activation and stored with AES-256-GCM encryption in Cloudflare D1.
+              </small>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Select Grok AI Model</label>
+              <select id="grok-model-select" class="form-control">
+                <option value="grok-2-1212">Grok 2 (Stable - 1212)</option>
+                <option value="grok-2-vision-1212">Grok 2 Vision (Multimodal)</option>
+                <option value="grok-beta">Grok Beta</option>
+              </select>
+              <small style="color:var(--text-dim); font-size:11px;">
+                Model IDs are dynamically validated. Switching models takes effect immediately across Voice Assistant and Product Research without redeployment.
+              </small>
+            </div>
+
+            <div style="display: flex; gap: 14px; margin-top: 24px;">
+              <button id="btn-save-grok-key" class="btn btn-primary">
+                Save &amp; Test API Key
+              </button>
+              <button id="btn-test-grok-conn" class="btn btn-secondary">
+                Test Current Connection
+              </button>
+              <button id="btn-save-grok-model" class="btn btn-secondary">
+                Activate Selected Model
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 5: MANUAL ROBOT CONTROL -->
+        <section id="section-manual-control" class="dashboard-section" style="display: none;">
+          <div class="panel-card" style="max-width: 600px; margin: 0 auto; text-align: center;">
+            <div class="panel-header">
+              <h3 class="panel-title">🎮 Remote Mechatronic Movement Console</h3>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="font-size: 13px; color: var(--text-muted);">Mode:</label>
+                <select id="robot-operating-mode-select" class="form-control" style="width: 140px; padding: 4px 8px;">
+                  <option value="MANUAL">MANUAL</option>
+                  <option value="AUTONOMOUS">AUTONOMOUS</option>
+                </select>
+              </div>
+            </div>
+
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+              Direct PWM motor control for dual Johnson 12V 60RPM gear motors via dual BTS7960 H-Bridges.
+              Movement commands have strict 5-second automatic expiration safety.
+            </p>
+
+            <div class="dpad-container">
+              <div></div>
+              <button class="dpad-btn" data-dir="FORWARD">▲</button>
+              <div></div>
+              
+              <button class="dpad-btn" data-dir="LEFT">◄</button>
+              <button class="dpad-btn stop-btn" data-dir="STOP">■</button>
+              <button class="dpad-btn" data-dir="RIGHT">►</button>
+              
+              <div></div>
+              <button class="dpad-btn" data-dir="REVERSE">▼</button>
+              <div></div>
+            </div>
+
+            <div class="form-group" style="margin-top: 28px; text-align: left;">
+              <div style="display: flex; justify-content: space-between;">
+                <label class="form-label">Motor PWM Speed Limit</label>
+                <span id="speed-val" style="color:var(--cyan-primary); font-weight:bold;">150 / 255</span>
+              </div>
+              <input type="range" id="robot-speed-slider" min="60" max="255" value="150" class="form-control" oninput="document.getElementById('speed-val').textContent = this.value + ' / 255'">
+            </div>
+
+            <button class="btn btn-estop trigger-estop" style="width: 100%; margin-top: 14px; padding: 14px;">
+              🛑 EMERGENCY MOTOR HALT
+            </button>
+          </div>
+        </section>
+
+        <!-- SECTION 6: ACTIVITY LOGS -->
+        <section id="section-logs" class="dashboard-section" style="display: none;">
+          <div class="panel-card">
+            <div class="panel-header">
+              <h3 class="panel-title">📋 Activity &amp; Transition Audit Logs</h3>
+              <button class="btn btn-secondary btn-sm" onclick="loadLogs()">Refresh Logs</button>
+            </div>
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Actor</th>
+                    <th>Action</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody id="logs-table-body">
+                  <!-- Injected via JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT PRODUCT -->
+  <div id="modal-product" class="modal-backdrop">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 id="modal-product-title" style="font-size: 18px; font-weight: 800; color: #fff;">Add Product</h3>
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-product')">✕</button>
+      </div>
+
+      <form id="form-product">
+        <input type="hidden" id="prod-id">
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label">Product Name *</label>
+            <input type="text" id="prod-name" class="form-control" required placeholder="e.g. Smart Wireless Headphones">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Brand</label>
+            <input type="text" id="prod-brand" class="form-control" placeholder="e.g. Apex Robotics">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label">Category *</label>
+            <select id="prod-category" class="form-control" required></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Model Number</label>
+            <input type="text" id="prod-model" class="form-control" placeholder="e.g. M3B-2026">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Price (INR ₹)</label>
+            <input type="number" id="prod-price" class="form-control" placeholder="e.g. 75000">
+          </div>
+        </div>
+
+        <!-- Grok AI Copilot Trigger -->
+        <div style="background: rgba(0, 240, 255, 0.08); border: 1px dashed var(--cyan-primary); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <strong style="color: #fff; font-size: 13px;">Grok AI Product Copilot</strong>
+            <p style="font-size: 11px; color: var(--text-muted); margin: 0;">Auto-generate Malayalam translation, specs, and highlights</p>
+          </div>
+          <button type="button" id="btn-grok-research" class="btn btn-primary btn-sm">
+            ✨ Research with Grok AI
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">English Description</label>
+          <textarea id="prod-desc" class="form-control" rows="3"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Malayalam Description (മലയാളം വിവരണം)</label>
+          <textarea id="prod-desc-ml" class="form-control" rows="3" style="font-family:'Manjari', sans-serif;"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Promotional Offers</label>
+          <input type="text" id="prod-promo" class="form-control" placeholder="e.g. ₹10,000 Early Bird Scholarship">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Features (JSON Array or Bullets)</label>
+          <input type="text" id="prod-features" class="form-control" placeholder='["Robotics Lab", "AI & Embedded IoT"]'>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-product')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Product</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script type="module" src="src/admin.js"></script>
+</body>
+</html>

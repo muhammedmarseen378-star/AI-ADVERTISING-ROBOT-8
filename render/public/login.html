@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login | AI Advertisement Robot</title>
+  <link rel="stylesheet" href="src/styles.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: radial-gradient(circle at 50% 30%, #0a1835 0%, #03060e 80%);
+      padding: 20px;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 440px;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 36px 32px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 25px var(--cyan-glow);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-card">
+    <div style="text-align: center; margin-bottom: 28px;">
+      <div class="logo-badge" style="margin: 0 auto 16px; width: 48px; height: 48px; font-size: 20px;">🛡️</div>
+      <h1 style="font-size: 22px; font-weight: 800; color: #fff;">Administrator Login</h1>
+      <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+        Autonomous AI Advertisement Robot Platform
+      </p>
+    </div>
+
+    <div id="login-alert" style="display: none; padding: 12px; border-radius: var(--radius-sm); margin-bottom: 20px; font-size: 13px;"></div>
+
+    <form id="form-login">
+      <div class="form-group">
+        <label class="form-label">Authorized Administrator Email</label>
+        <input type="email" id="login-email" class="form-control" value="nttf.ttc.m3b.group1.project@gmail.com" required readonly style="background-color: rgba(255,255,255,0.02); color: var(--cyan-primary);">
+        <small style="color: var(--text-dim); font-size: 11px;">Authorized system administrator account.</small>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="login-password" class="form-control" placeholder="••••••••••••" required autofocus minlength="8">
+      </div>
+
+      <!-- Cloudflare Worker API URL Setting -->
+      <div class="form-group" style="margin-top: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <label class="form-label" style="margin: 0; font-size: 12px;">Cloudflare Worker API URL</label>
+          <a href="#" id="toggle-api-url" style="font-size: 11px; color: var(--cyan-primary); text-decoration: none;">⚙️ Set URL</a>
+        </div>
+        <input type="text" id="worker-api-url" class="form-control" placeholder="https://advertising-robot.muhammedmarseen378.workers.dev" style="display: none; font-size: 12px; font-family: monospace;">
+      </div>
+
+      <!-- Password Setup Key (Only shown when initial bootstrap is needed) -->
+      <div id="setup-key-group" class="form-group" style="display: none;">
+        <label class="form-label">Master Setup Secret Key</label>
+        <input type="password" id="login-setup-key" class="form-control" placeholder="Enter master setup key">
+        <small style="color: var(--text-dim); font-size: 11px;">Required for first-time password initialization.</small>
+      </div>
+
+      <button type="submit" id="btn-submit" class="btn btn-primary" style="width: 100%; margin-top: 10px; padding: 12px;">
+        Sign In to Admin Dashboard
+      </button>
+
+      <div style="margin-top: 20px; text-align: center;">
+        <a href="#" id="toggle-setup-mode" style="font-size: 12px; color: var(--text-muted);">
+          First time setup? Click here to set up password
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <script type="module">
+    import { apiLogin, apiSetupPassword, setAdminToken, setApiBase, getApiBase } from './src/api.js';
+
+    let isSetupMode = false;
+    const form = document.getElementById('form-login');
+    const alertBox = document.getElementById('login-alert');
+    const btnSubmit = document.getElementById('btn-submit');
+    const setupGroup = document.getElementById('setup-key-group');
+    const toggleSetup = document.getElementById('toggle-setup-mode');
+    const apiUrlInput = document.getElementById('worker-api-url');
+    const toggleApiUrl = document.getElementById('toggle-api-url');
+
+    // Pre-populate API base URL
+    apiUrlInput.value = getApiBase();
+    if (window.location.protocol === 'file:' || !getApiBase() || getApiBase() === '/api') {
+      apiUrlInput.style.display = 'block';
+    }
+
+    toggleApiUrl.addEventListener('click', (e) => {
+      e.preventDefault();
+      apiUrlInput.style.display = apiUrlInput.style.display === 'none' ? 'block' : 'none';
+    });
+
+    toggleSetup.addEventListener('click', (e) => {
+      e.preventDefault();
+      isSetupMode = !isSetupMode;
+      if (isSetupMode) {
+        setupGroup.style.display = 'block';
+        btnSubmit.textContent = 'Configure Administrator Password';
+        toggleSetup.textContent = 'Already configured? Return to Sign In';
+      } else {
+        setupGroup.style.display = 'none';
+        btnSubmit.textContent = 'Sign In to Admin Dashboard';
+        toggleSetup.textContent = 'First time setup? Click here to set up password';
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertBox.style.display = 'none';
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = 'Authenticating...';
+
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const setupKey = document.getElementById('login-setup-key').value;
+
+      if (apiUrlInput.value.trim()) {
+        setApiBase(apiUrlInput.value.trim());
+      }
+
+      try {
+        if (isSetupMode) {
+          const res = await apiSetupPassword(email, password, setupKey);
+          alertBox.style.display = 'block';
+          alertBox.style.background = 'rgba(0, 230, 118, 0.15)';
+          alertBox.style.border = '1px solid var(--success)';
+          alertBox.style.color = '#fff';
+          alertBox.textContent = res.message || 'Password configured successfully! Please sign in.';
+          isSetupMode = false;
+          setupGroup.style.display = 'none';
+          btnSubmit.textContent = 'Sign In to Admin Dashboard';
+        } else {
+          const res = await apiLogin(email, password);
+          if (res.token) {
+            setAdminToken(res.token);
+            window.location.href = 'admin.html';
+          }
+        }
+      } catch (err) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = 'rgba(255, 23, 68, 0.15)';
+        alertBox.style.border = '1px solid var(--danger)';
+        alertBox.style.color = '#ff8080';
+        alertBox.textContent = err.message;
+      } finally {
+        btnSubmit.disabled = false;
+        if (!isSetupMode) btnSubmit.textContent = 'Sign In to Admin Dashboard';
+      }
+    });
+  </script>
+
+</body>
+</html>

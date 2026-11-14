@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 600" width="1024" height="600">
+  <defs>
+    <linearGradient id="bg4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#02140a"/>
+      <stop offset="60%" stop-color="#062e17"/>
+      <stop offset="100%" stop-color="#010a05"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="600" fill="url(#bg4)"/>
+  <rect x="60" y="45" width="220" height="34" rx="17" fill="rgba(0,255,136,0.15)" stroke="#00ff88" stroke-width="1.5"/>
+  <text x="80" y="67" fill="#00ff88" font-family="'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="bold">CLEAN GREEN MOBILITY</text>
+  
+  <text x="60" y="140" fill="#ffffff" font-family="'Segoe UI', Roboto, sans-serif" font-size="44" font-weight="900">VOLTRIDE APEX ELECTRIC</text>
+  <text x="60" y="190" fill="#00ff88" font-family="'Segoe UI', Roboto, sans-serif" font-size="32" font-weight="800">140 km True Range • 0-40 in 3.1s</text>
+  <text x="60" y="240" fill="#a0aec0" font-family="'Segoe UI', Roboto, sans-serif" font-size="18">Smart connected electric scooter with regenerative braking and IP67 waterproof battery pack.</text>
+  
+  <g transform="translate(60, 280)">
+    <rect width="480" height="180" rx="12" fill="rgba(255,255,255,0.03)" stroke="rgba(0,255,136,0.3)"/>
+    <text x="30" y="45" fill="#00ff88" font-family="'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="600">⚡ 3.7 kWh Safe LiFePO4 Battery Pack</text>
+    <text x="30" y="85" fill="#00ff88" font-family="'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="600">⚡ Touchscreen Navigation &amp; Anti-theft GPS</text>
+    <text x="30" y="125" fill="#00ff88" font-family="'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="600">⚡ 5-Year / 60,000 km Complete Warranty</text>
+    <text x="30" y="160" fill="#ffd200" font-family="'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="900">PRICE: ₹1,15,000</text>
+  </g>
+
+  <!-- EV graphic -->
+  <g transform="translate(680, 210)">
+    <circle cx="60" cy="160" r="40" fill="none" stroke="#00ff88" stroke-width="8"/>
+    <circle cx="200" cy="160" r="40" fill="none" stroke="#00ff88" stroke-width="8"/>
+    <path d="M 60 160 L 130 160 L 170 80 L 150 50" fill="none" stroke="#ffffff" stroke-width="7"/>
+    <path d="M 130 160 L 200 160" fill="none" stroke="#00ff88" stroke-width="7"/>
+    <text x="75" y="40" fill="#00ff88" font-size="16" font-weight="bold">ECO COMMUTE</text>
+  </g>
+  
+  <rect x="60" y="505" width="904" height="55" rx="10" fill="#00ff88"/>
+  <text x="85" y="539" fill="#000000" font-family="'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="900">STUDENT SPECIAL: Free Fast Charger &amp; 3-Year Roadside Assistance Included!</text>
+</svg>
