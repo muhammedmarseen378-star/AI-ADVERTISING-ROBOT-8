@@ -38,7 +38,29 @@ let state = {
     last_heartbeat: new Date().toISOString()
   },
   pendingCommands: [],
-  categories: [],
+  categories: [
+    { id: 'cat_01', name: 'Food & Beverage', slug: 'food-beverage', icon: '🍔', display_order: 1 },
+    { id: 'cat_02', name: 'Education & Training', slug: 'education-training', icon: '🎓', display_order: 2 },
+    { id: 'cat_03', name: 'Computer / Laptop', slug: 'computer-laptop', icon: '💻', display_order: 3 },
+    { id: 'cat_04', name: 'Mobile / Smartphone', slug: 'mobile-smartphone', icon: '📱', display_order: 4 },
+    { id: 'cat_05', name: 'Electronics', slug: 'electronics', icon: '⚡', display_order: 5 },
+    { id: 'cat_06', name: 'Automobile & EV', slug: 'automobile-ev', icon: '🚗', display_order: 6 },
+    { id: 'cat_07', name: 'Hotel / Resort', slug: 'hotel-resort', icon: '🏨', display_order: 7 },
+    { id: 'cat_08', name: 'Restaurant / Cafe', slug: 'restaurant-cafe', icon: '☕', display_order: 8 },
+    { id: 'cat_09', name: 'Clothing / Fashion', slug: 'clothing-fashion', icon: '👗', display_order: 9 },
+    { id: 'cat_10', name: 'Home Appliances', slug: 'home-appliances', icon: '🏠', display_order: 10 },
+    { id: 'cat_11', name: 'Healthcare / Pharmacy', slug: 'healthcare-pharmacy', icon: '💊', display_order: 11 },
+    { id: 'cat_12', name: 'Fitness / Gym', slug: 'fitness-gym', icon: '💪', display_order: 12 },
+    { id: 'cat_13', name: 'Salon / Beauty', slug: 'salon-beauty', icon: '💇', display_order: 13 },
+    { id: 'cat_14', name: 'Retail / Shopping', slug: 'retail-shopping', icon: '🛍️', display_order: 14 },
+    { id: 'cat_15', name: 'Finance / Banking', slug: 'finance-banking', icon: '💳', display_order: 15 },
+    { id: 'cat_16', name: 'Travel / Tourism', slug: 'travel-tourism', icon: '✈️', display_order: 16 },
+    { id: 'cat_17', name: 'Real Estate', slug: 'real-estate', icon: '🏢', display_order: 17 },
+    { id: 'cat_18', name: 'Service / Repair', slug: 'service-repair', icon: '🔧', display_order: 18 },
+    { id: 'cat_19', name: 'Coaching / Workshops', slug: 'coaching-workshops', icon: '📚', display_order: 19 },
+    { id: 'cat_20', name: 'Gaming / Esports', slug: 'gaming-esports', icon: '🎮', display_order: 20 },
+    { id: 'cat_21', name: 'Other / Custom', slug: 'other-custom', icon: '✨', display_order: 21 }
+  ],
   products: [],
   advertisements: [],
   schedules: []
@@ -49,11 +71,15 @@ try {
   if (fs.existsSync(DATA_FILE)) {
     const raw = fs.readFileSync(DATA_FILE, 'utf8');
     const parsed = JSON.parse(raw);
+    const prevCats = state.categories;
     state = { ...state, ...parsed };
-    // Eliminate any legacy dummy categories
+    // Merge default categories with any custom saved categories
+    const catMap = new Map();
+    prevCats.forEach(c => catMap.set(c.id, c));
     if (Array.isArray(state.categories)) {
-      state.categories = state.categories.filter(c => !c.id.startsWith('cat_0') && !c.id.startsWith('cat_1') && !c.id.startsWith('cat_2'));
+      state.categories.forEach(c => catMap.set(c.id, c));
     }
+    state.categories = Array.from(catMap.values());
     if (!Array.isArray(state.schedules)) {
       state.schedules = [];
     }
