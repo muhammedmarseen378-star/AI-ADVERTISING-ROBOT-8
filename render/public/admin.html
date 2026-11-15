@@ -9,14 +9,17 @@
 <body>
 
   <div class="admin-layout">
-    <!-- Sidebar Navigation -->
+    <!-- Sidebar Navigation Drawer -->
     <aside class="sidebar">
       <div class="sidebar-header">
-        <div class="logo-badge">🤖</div>
-        <div class="logo-text">
-          <h2>AD ROBOT</h2>
-          <span>ENTERPRISE AI</span>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="logo-badge">🤖</div>
+          <div class="logo-text">
+            <h2>AD ROBOT</h2>
+            <span>ENTERPRISE AI</span>
+          </div>
         </div>
+        <button id="mobile-menu-close" class="btn-mobile-close" aria-label="Close menu">&times;</button>
       </div>
 
       <nav class="sidebar-nav">
@@ -81,19 +84,27 @@
       </div>
     </aside>
 
+    <!-- Mobile Drawer Backdrop Overlay -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
     <!-- Main Workspace -->
     <div class="main-wrapper">
       <!-- Top Header Bar -->
       <header class="topbar">
         <div class="topbar-left">
+          <button id="mobile-menu-toggle" class="btn-mobile-toggle" aria-label="Toggle navigation drawer" title="Open Menu">
+            <span class="hamburger-bar"></span>
+            <span class="hamburger-bar"></span>
+            <span class="hamburger-bar"></span>
+          </button>
           <h2 class="topbar-title">Mechatronics Control Console</h2>
         </div>
 
         <div class="topbar-right">
-          <!-- Robot Connection Status Indicator -->
-          <div class="status-pill">
+          <!-- Dual ESP32 Connection Status Indicator (2/2, 1/2, 0/2) -->
+          <div id="top-robot-pill" class="status-pill offline" title="ESP32 Internet Connection Status">
             <span id="top-robot-dot" class="status-dot offline"></span>
-            <span id="top-robot-text">Checking Robot...</span>
+            <span id="top-robot-text"><span class="status-full">Checking ESPs...</span><span class="status-compact">Checking...</span></span>
           </div>
 
           <!-- View Live Camera Feed Button -->
@@ -103,7 +114,8 @@
 
           <!-- Prominent Emergency Stop Button -->
           <button class="btn btn-estop trigger-estop">
-            🛑 EMERGENCY STOP
+            <span class="estop-full">🛑 EMERGENCY STOP</span>
+            <span class="estop-compact">🛑 E-STOP</span>
           </button>
 
           <!-- Topbar Quick Logout -->
@@ -719,14 +731,15 @@
             <input type="number" id="ad-price" class="form-control" placeholder="Enter price in ₹">
           </div>
           <div class="form-group">
-            <label class="form-label">DWIN Screen (1-5)</label>
+            <label class="form-label">DWIN Screen (Page 1-5)</label>
             <select id="ad-page-id" class="form-control">
-              <option value="1">Page 1</option>
+              <option value="1" selected>Page 1 (Single Page Mode / Default)</option>
               <option value="2">Page 2</option>
               <option value="3">Page 3</option>
               <option value="4">Page 4</option>
               <option value="5">Page 5</option>
             </select>
+            <small style="color:var(--text-dim); font-size:11px;">Page 1 is your single full-time poster screen on DWIN LCM</small>
           </div>
           <div class="form-group">
             <label class="form-label">Priority</label>
@@ -765,13 +778,22 @@
         </div>
         <div class="form-group">
           <label class="form-label">Display Symbol / Icon</label>
-          <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+          <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
             <span id="cat-icon-preview" style="font-size: 26px; width: 44px; height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center; background: rgba(0, 240, 255, 0.1); border: 1px solid var(--border-color); border-radius: 8px;">🏷️</span>
-            <input type="text" id="cat-icon" class="form-control" placeholder="Select a symbol below or type your own" value="🏷️" style="font-size: 15px;">
+            <input type="text" id="cat-icon" class="form-control" placeholder="Select symbol below or enter any emoji" value="🏷️" style="font-size: 15px;">
           </div>
           
-          <label class="form-label" style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">Select Symbol from Palette (Click to Apply):</label>
-          <div id="category-symbol-picker" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 6px; max-height: 150px; overflow-y: auto; padding: 10px; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label class="form-label" style="font-size: 11px; color: var(--text-muted); margin: 0;">Symbol Library (220+ Emojis):</label>
+            <input type="text" id="search-symbol-input" placeholder="🔍 Filter symbols..." style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; padding: 2px 8px; font-size: 11px; color: #fff; width: 130px;">
+          </div>
+
+          <!-- Category Filter Tabs -->
+          <div id="symbol-tabs-bar" style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 6px;">
+            <!-- Tabs injected dynamically -->
+          </div>
+
+          <div id="category-symbol-picker" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 6px; max-height: 180px; overflow-y: auto; padding: 10px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;">
             <!-- Category symbols injected dynamically -->
           </div>
         </div>
@@ -815,16 +837,25 @@
           <div class="form-group">
             <label class="form-label">DWIN Screen (Page 1-5)</label>
             <select id="sched-page-id" class="form-control">
-              <option value="1">Page 1</option>
+              <option value="1" selected>Page 1 (Full-Time Poster Screen)</option>
               <option value="2">Page 2</option>
               <option value="3">Page 3</option>
               <option value="4">Page 4</option>
               <option value="5">Page 5</option>
             </select>
+            <small style="color:var(--text-dim); font-size:11px;">Fixed to Page 1 for Single-Page display</small>
           </div>
           <div class="form-group">
-            <label class="form-label">Rotation Duration (Sec)</label>
-            <input type="number" id="sched-duration" class="form-control" value="30" min="5" max="3600">
+            <label class="form-label">Display Mode &amp; Duration</label>
+            <select id="sched-duration-mode" class="form-control">
+              <option value="full_time" selected>⭐ Full Time (Continuous Until End)</option>
+              <option value="30">30 Seconds Rotation</option>
+              <option value="60">60 Seconds (1 Min)</option>
+              <option value="120">2 Minutes</option>
+              <option value="custom">Custom Rotation Seconds...</option>
+            </select>
+            <input type="number" id="sched-duration" class="form-control" value="0" min="0" max="86400" style="display: none; margin-top: 6px;" placeholder="Seconds (e.g. 30)">
+            <small id="sched-duration-help" style="color:var(--text-dim); font-size:11px;">Poster stays on screen full time until completion</small>
           </div>
         </div>
 

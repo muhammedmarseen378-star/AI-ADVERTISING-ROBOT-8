@@ -113,14 +113,38 @@ function showToast(message, type = 'success') {
 }
 
 /**
- * Navigation Router
+ * Navigation Router with Mobile Drawer Support
  */
 function setupNavigation() {
+  const menuToggle = document.getElementById('mobile-menu-toggle');
+  const menuClose = document.getElementById('mobile-menu-close');
+  const sidebarOverlay = document.getElementById('sidebar-overlay');
+  const sidebar = document.querySelector('.sidebar');
+
+  function openMobileMenu() {
+    if (sidebar) sidebar.classList.add('mobile-open');
+    if (sidebarOverlay) sidebarOverlay.classList.add('active');
+    document.body.classList.add('menu-open');
+  }
+
+  function closeMobileMenu() {
+    if (sidebar) sidebar.classList.remove('mobile-open');
+    if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+    document.body.classList.remove('menu-open');
+  }
+
+  if (menuToggle) menuToggle.addEventListener('click', openMobileMenu);
+  if (menuClose) menuClose.addEventListener('click', closeMobileMenu);
+  if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeMobileMenu);
+
   document.querySelectorAll('.nav-link[data-section]').forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       const target = link.getAttribute('data-section');
       switchSection(target);
+      if (window.innerWidth <= 900) {
+        closeMobileMenu();
+      }
     });
   });
 
@@ -215,6 +239,34 @@ function setupActionListeners() {
     });
   }
 
+  // Schedule Duration Mode change listener (Full Time vs Custom Rotation)
+  const schedDurMode = document.getElementById('sched-duration-mode');
+  const schedDurInput = document.getElementById('sched-duration');
+  const schedDurHelp = document.getElementById('sched-duration-help');
+  if (schedDurMode) {
+    schedDurMode.addEventListener('change', () => {
+      if (schedDurMode.value === 'custom') {
+        if (schedDurInput) {
+          schedDurInput.style.display = 'block';
+          if (!parseInt(schedDurInput.value)) schedDurInput.value = '30';
+        }
+        if (schedDurHelp) schedDurHelp.textContent = 'Enter custom rotation interval in seconds';
+      } else if (schedDurMode.value === 'full_time') {
+        if (schedDurInput) {
+          schedDurInput.style.display = 'none';
+          schedDurInput.value = '0';
+        }
+        if (schedDurHelp) schedDurHelp.textContent = 'Poster stays on screen full time until completion';
+      } else {
+        if (schedDurInput) {
+          schedDurInput.style.display = 'none';
+          schedDurInput.value = schedDurMode.value;
+        }
+        if (schedDurHelp) schedDurHelp.textContent = `Rotates to next ad every ${schedDurMode.value} seconds`;
+      }
+    });
+  }
+
   // Products filters & Search
   const searchProd = document.getElementById('search-product');
   if (searchProd) {
@@ -296,43 +348,94 @@ function setupActionListeners() {
   initCategorySymbolPicker();
 }
 
-const CATEGORY_SYMBOLS = [
-  '🏷️', '🛍️', '🛒', '📦', '🎁', '💎', '🏬', '🏢', '💳', '✨',
-  '💻', '📱', '⚡', '🎧', '📷', '📺', '🎮', '🤖', '🔋', '⌨️', '🖱️', '🖨️', '⌚',
-  '🍔', '🍕', '☕', '🍹', '🍰', '🍦', '🥗', '🍱', '🍜', '🍎', '🍞', '🍿', '🍩',
-  '👗', '👟', '👕', '👠', '💄', '💇', '💍', '👜', '👓', '🧢',
-  '💊', '🩺', '💪', '🏋️', '🧘', '🚴', '⚽', '🏆', '🌿', '🧴',
-  '🚗', '🛵', '🚲', '✈️', '🚀', '🚢', '⛽', '🏖️', '🚆',
-  '🔧', '🔨', '💼', '🎓', '📚', '🎨', '🎵', '🏠', '🛋️', '💡', '🔑', '🧰'
-];
+const CATEGORY_SYMBOL_GROUPS = {
+  'All': [
+    '🏷️', '🛍️', '🛒', '📦', '🎁', '💎', '🏬', '🏢', '💳', '💰', '💵', '🪙', '🧾', '🏪', '🪪', '⚖️', '✨', '🌟',
+    '💻', '📱', '⚡', '🎧', '📷', '📺', '🎮', '🤖', '🔋', '⌨️', '🖱️', '🖨️', '⌚', '🎙️', '📻', '📹', '🕹️', '🔌', '📡', '💾', '💿', '🖥️', '🖲️', '📟', '💡',
+    '🍔', '🍕', '☕', '🍹', '🍰', '🍦', '🥗', '🍱', '🍜', '🍎', '🍞', '🍿', '🍩', '🍫', '🍇', '🍉', '🍓', '🥑', '🥩', '🍗', '🥪', '🌮', '🍣', '🥟', '🍵', '🍺', '🍷', '🧃',
+    '👗', '👟', '👕', '👠', '💄', '💇', '💍', '👜', '👓', '🧢', '👔', '🧥', '👖', '🩳', '👢', '👡', '🧦', '🧤', '🧣', '🪞', '🧴', '🪮', '💅', '🌂',
+    '💊', '🩺', '💪', '🏋️', '🧘', '🚴', '⚽', '🏆', '🌿', '🩹', '💉', '🧬', '🩸', '🏥', '🚑', '🦷', '🧼', '🪥', '🥊', '🏊', '🎾', '🏀', '🏸',
+    '🚗', '🛵', '🚲', '✈️', '🚀', '🚢', '⛽', '🏖️', '🚆', '🏎️', '🏍️', '🚙', '🚚', '🚜', '🚁', '⛵', '🚊', '🚖', '🚨', '🚦', '🗺️',
+    '🏠', '🛋️', '🔑', '🧰', '🪴', '🍳', '🧹', '🚪', '🛏️', '🚿', '🪟', '🏡', '🏗️', '🏰', '🧱', '🔨', '🪚', '🪜',
+    '🎓', '📚', '🔧', '💼', '🎨', '🎵', '📝', '📊', '📈', '📌', '🔒', '🛡️', '📋', '✉️', '📯', '🔍', '🧭', '🛎️', '🧑‍🏫', '🧑‍💻', '🧑‍🍳', '🧑‍🔧',
+    '🎲', '🎯', '🎳', '🎬', '🎤', '🎪', '🎟️', '🎫', '🎭', '🎻', '🎸', '🎹', '🥁', '🔮', '🪄', '🧸',
+    '🐶', '🐱', '🐠', '🦜', '🌾', '🌻', '🌲', '🌴', '🍀', '🐾', '🐮', '🐴', '🐑', '🐝', '🥕', '🍅', '🥔'
+  ],
+  'Retail': ['🏷️', '🛍️', '🛒', '📦', '🎁', '💎', '🏬', '🏢', '💳', '💰', '💵', '🪙', '🧾', '🏪', '🪪', '⚖️', '✨', '🌟'],
+  'Tech': ['💻', '📱', '⚡', '🎧', '📷', '📺', '🎮', '🤖', '🔋', '⌨️', '🖱️', '🖨️', '⌚', '🎙️', '📻', '📹', '🕹️', '🔌', '📡', '💾', '💿', '🖥️', '🖲️', '📟', '💡'],
+  'Food': ['🍔', '🍕', '☕', '🍹', '🍰', '🍦', '🥗', '🍱', '🍜', '🍎', '🍞', '🍿', '🍩', '🍫', '🍇', '🍉', '🍓', '🥑', '🥩', '🍗', '🥪', '🌮', '🍣', '🥟', '🍵', '🍺', '🍷', '🧃'],
+  'Fashion': ['👗', '👟', '👕', '👠', '💄', '💇', '💍', '👜', '👓', '🧢', '👔', '🧥', '👖', '🩳', '👢', '👡', '🧦', '🧤', '🧣', '🪞', '🧴', '🪮', '💅', '🌂'],
+  'Health': ['💊', '🩺', '💪', '🏋️', '🧘', '🚴', '⚽', '🏆', '🌿', '🩹', '💉', '🧬', '🩸', '🏥', '🚑', '🦷', '🧼', '🪥', '🥊', '🏊', '🎾', '🏀', '🏸'],
+  'Auto': ['🚗', '🛵', '🚲', '✈️', '🚀', '🚢', '⛽', '🏖️', '🚆', '🏎️', '🏍️', '🚙', '🚚', '🚜', '🚁', '⛵', '🚊', '🚖', '🚨', '🚦', '🗺️'],
+  'Home': ['🏠', '🛋️', '💡', '🔑', '🧰', '🪴', '🍳', '🧹', '🚪', '🛏️', '🚿', '🪟', '🏡', '🏗️', '🏰', '🧱', '🔨', '🪚', '🪜'],
+  'Services': ['🎓', '📚', '🔧', '💼', '🎨', '🎵', '📝', '📊', '📈', '📌', '🔒', '🛡️', '📋', '✉️', '📯', '🔍', '🧭', '🛎️', '🧑‍🏫', '🧑‍💻', '🧑‍🍳', '🧑‍🔧'],
+  'Media': ['🎮', '🎲', '🎯', '🎳', '🎬', '🎤', '🎪', '🎟️', '🎫', '🎭', '🎻', '🎸', '🎹', '🥁', '🔮', '🪄', '🧸'],
+  'Nature': ['🐶', '🐱', '🐠', '🦜', '🌾', '🌻', '🌲', '🌴', '🍀', '🐾', '🐮', '🐴', '🐑', '🐝', '🥕', '🍅', '🥔']
+};
 
 function initCategorySymbolPicker() {
   const container = document.getElementById('category-symbol-picker');
+  const tabsBar = document.getElementById('symbol-tabs-bar');
+  const searchInput = document.getElementById('search-symbol-input');
   const iconInput = document.getElementById('cat-icon');
   const iconPreview = document.getElementById('cat-icon-preview');
   if (!container || !iconInput) return;
 
-  container.innerHTML = CATEGORY_SYMBOLS.map(sym => `
-    <button type="button" class="btn-symbol-chip" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; font-size: 18px; padding: 4px; cursor: pointer; transition: all 0.2s;" data-symbol="${sym}">${sym}</button>
-  `).join('');
+  let activeTab = 'All';
 
-  container.querySelectorAll('.btn-symbol-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const sym = btn.getAttribute('data-symbol');
-      iconInput.value = sym;
-      if (iconPreview) iconPreview.textContent = sym;
-      container.querySelectorAll('.btn-symbol-chip').forEach(b => {
-        b.style.borderColor = 'rgba(255,255,255,0.12)';
-        b.style.background = 'rgba(255,255,255,0.06)';
+  function renderTabs() {
+    if (!tabsBar) return;
+    tabsBar.innerHTML = Object.keys(CATEGORY_SYMBOL_GROUPS).map(group => `
+      <button type="button" class="btn-tab-chip ${group === activeTab ? 'active' : ''}" style="white-space: nowrap; font-size: 11px; padding: 3px 8px; border-radius: 4px; border: 1px solid ${group === activeTab ? 'var(--cyan-primary)' : 'rgba(255,255,255,0.12)'}; background: ${group === activeTab ? 'rgba(0, 240, 255, 0.2)' : 'rgba(255,255,255,0.05)'}; color: ${group === activeTab ? 'var(--cyan-primary)' : '#cbd5e1'}; cursor: pointer;" data-group="${group}">
+        ${group} (${CATEGORY_SYMBOL_GROUPS[group].length})
+      </button>
+    `).join('');
+
+    tabsBar.querySelectorAll('.btn-tab-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeTab = btn.getAttribute('data-group');
+        renderTabs();
+        renderSymbols();
       });
-      btn.style.borderColor = 'var(--cyan-primary)';
-      btn.style.background = 'rgba(0, 240, 255, 0.25)';
     });
-  });
+  }
+
+  function renderSymbols(filter = '') {
+    const list = CATEGORY_SYMBOL_GROUPS[activeTab] || CATEGORY_SYMBOL_GROUPS['All'];
+    const query = (filter || '').toLowerCase().trim();
+    const filtered = query ? list.filter(sym => sym.includes(query)) : list;
+
+    container.innerHTML = filtered.map(sym => `
+      <button type="button" class="btn-symbol-chip" style="background: rgba(255,255,255,0.06); border: 1px solid ${iconInput.value === sym ? 'var(--cyan-primary)' : 'rgba(255,255,255,0.12)'}; border-radius: 6px; font-size: 19px; padding: 4px; cursor: pointer; transition: all 0.15s;" data-symbol="${sym}">${sym}</button>
+    `).join('');
+
+    container.querySelectorAll('.btn-symbol-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sym = btn.getAttribute('data-symbol');
+        iconInput.value = sym;
+        if (iconPreview) iconPreview.textContent = sym;
+        container.querySelectorAll('.btn-symbol-chip').forEach(b => {
+          b.style.borderColor = 'rgba(255,255,255,0.12)';
+          b.style.background = 'rgba(255,255,255,0.06)';
+        });
+        btn.style.borderColor = 'var(--cyan-primary)';
+        btn.style.background = 'rgba(0, 240, 255, 0.25)';
+      });
+    });
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      renderSymbols(e.target.value);
+    });
+  }
 
   iconInput.addEventListener('input', (e) => {
     if (iconPreview) iconPreview.textContent = e.target.value.trim() || '🏷️';
   });
+
+  renderTabs();
+  renderSymbols();
 }
 
 window.deleteCategory = async (id) => {
@@ -420,17 +523,56 @@ async function loadOverview() {
 
 async function pollTelemetry() {
   try {
-    const data = await apiGetRobotStatus();
-    if (!data) return;
+    const [robotData, cameraData] = await Promise.all([
+      apiGetRobotStatus().catch(() => null),
+      apiGetCameraStatus().catch(() => null)
+    ]);
 
-    const isOnline = (data.online !== undefined ? data.online : (data.device?.status === 'online'));
-    const isEstop = !!data.emergencyStopActive;
+    const isMainOnline = Boolean(robotData && (robotData.online !== undefined ? robotData.online : (robotData.device?.status === 'online')));
+    const isCamOnline = Boolean(cameraData && (cameraData.online !== undefined ? cameraData.online : (cameraData.device?.status === 'online')));
+    const isEstop = Boolean(robotData && robotData.emergencyStopActive);
+
+    const onlineCount = (isMainOnline ? 1 : 0) + (isCamOnline ? 1 : 0);
 
     // Top status badges
     const dot = document.getElementById('top-robot-dot');
     const text = document.getElementById('top-robot-text');
-    if (dot) dot.className = `status-dot ${isOnline ? 'online' : 'offline'}`;
-    if (text) text.textContent = isOnline ? 'Robot Online (ESP32)' : 'Robot Offline';
+    const pill = document.getElementById('top-robot-pill') || (dot ? dot.closest('.status-pill') : null);
+
+    if (dot && text) {
+      if (onlineCount === 2) {
+        dot.className = 'status-dot online';
+        if (pill) pill.className = 'status-pill online';
+        text.innerHTML = '<span class="status-full">🟢 Online (2/2 ESPs)</span><span class="status-compact">2/2 Online</span>';
+        if (pill) pill.title = 'Both SevenSemi Main ESP32 and AI Camera ESP32-S3 connected to cloud';
+      } else if (onlineCount === 1) {
+        dot.className = 'status-dot warning';
+        if (pill) pill.className = 'status-pill warning';
+        const which = isMainOnline ? 'Main Online' : 'Cam Online';
+        text.innerHTML = `<span class="status-full">🟡 1/2 Online (${which})</span><span class="status-compact">1/2 Online</span>`;
+        if (pill) pill.title = `1 of 2 ESPs online (${isMainOnline ? 'Main Controller connected, Camera offline' : 'AI Camera connected, Main Controller offline'})`;
+      } else {
+        dot.className = 'status-dot offline';
+        if (pill) pill.className = 'status-pill offline';
+        text.innerHTML = '<span class="status-full">🔴 Offline (0/2 ESPs)</span><span class="status-compact">0/2 Offline</span>';
+        if (pill) pill.title = 'Both ESP32 controllers are offline';
+      }
+    }
+
+    // Overview Card Sync
+    const syncText = document.getElementById('overview-robot-sync');
+    if (syncText) {
+      if (onlineCount === 2) {
+        syncText.textContent = '2/2 Online (Dual Linked)';
+        syncText.style.color = 'var(--success, #10b981)';
+      } else if (onlineCount === 1) {
+        syncText.textContent = isMainOnline ? '1/2 Online (Main Only)' : '1/2 Online (Cam Only)';
+        syncText.style.color = '#f59e0b';
+      } else {
+        syncText.textContent = '0/2 Offline';
+        syncText.style.color = 'var(--danger, #ef4444)';
+      }
+    }
 
     // Emergency Stop Banner
     const estopBanner = document.getElementById('global-estop-banner');
@@ -1291,10 +1433,10 @@ function renderSchedulesTable() {
             </div>
           </div>
         </td>
-        <td><span class="status-pill">Page ${s.display_page_id || 1}</span></td>
+        <td><span class="status-pill">${parseInt(s.display_page_id) === 1 || !s.display_page_id ? 'Page 1 (Primary)' : 'Page ' + s.display_page_id}</span></td>
         <td><strong style="color:#fff;">${s.start_time || '09:00'}</strong></td>
         <td><strong style="color:#fff;">${s.end_time || '21:00'}</strong></td>
-        <td>${s.duration_sec || 30}s loop</td>
+        <td>${(!s.duration_sec || parseInt(s.duration_sec) === 0 || parseInt(s.duration_sec) >= 86400) ? '<span class="badge" style="background:rgba(0, 240, 255, 0.12); border:1px solid #00f0ff; color:#00f0ff; font-weight:700;">⭐ Full Time (Until End)</span>' : `${s.duration_sec}s loop`}</td>
         <td><span style="font-size:12px; color:var(--text-dim);">${s.days || 'Every Day'}</span></td>
         <td>
           <button class="btn btn-sm ${isActive ? 'btn-secondary' : 'btn-secondary'}" style="${isActive ? 'border-color: rgba(0,240,255,0.4); color: var(--cyan-primary);' : 'opacity: 0.6;'}" onclick="window.toggleSchedule('${s.id}')">
@@ -1326,6 +1468,15 @@ window.openCreateScheduleModal = () => {
   const form = document.getElementById('form-schedule');
   if (form) form.reset();
   document.getElementById('sched-id').value = '';
+  document.getElementById('sched-page-id').value = '1';
+  
+  const durMode = document.getElementById('sched-duration-mode');
+  const durInput = document.getElementById('sched-duration');
+  const durHelp = document.getElementById('sched-duration-help');
+  if (durMode) durMode.value = 'full_time';
+  if (durInput) { durInput.value = '0'; durInput.style.display = 'none'; }
+  if (durHelp) durHelp.textContent = 'Poster stays on screen full time until completion';
+
   document.getElementById('modal-schedule-title').textContent = 'Create Schedule Rule';
   openModal('modal-schedule');
 };
@@ -1345,7 +1496,26 @@ window.editSchedule = (id) => {
   document.getElementById('sched-start-time').value = s.start_time || '09:00';
   document.getElementById('sched-end-time').value = s.end_time || '21:00';
   document.getElementById('sched-page-id').value = s.display_page_id || '1';
-  document.getElementById('sched-duration').value = s.duration_sec || 30;
+
+  const durMode = document.getElementById('sched-duration-mode');
+  const durInput = document.getElementById('sched-duration');
+  const durHelp = document.getElementById('sched-duration-help');
+  const sDur = parseInt(s.duration_sec || 0);
+
+  if (sDur === 0 || sDur >= 86400) {
+    if (durMode) durMode.value = 'full_time';
+    if (durInput) { durInput.value = '0'; durInput.style.display = 'none'; }
+    if (durHelp) durHelp.textContent = 'Poster stays on screen full time until completion';
+  } else if ([30, 60, 120].includes(sDur)) {
+    if (durMode) durMode.value = String(sDur);
+    if (durInput) { durInput.value = String(sDur); durInput.style.display = 'none'; }
+    if (durHelp) durHelp.textContent = `Rotates to next ad every ${sDur} seconds`;
+  } else {
+    if (durMode) durMode.value = 'custom';
+    if (durInput) { durInput.value = String(sDur); durInput.style.display = 'block'; }
+    if (durHelp) durHelp.textContent = 'Enter custom rotation interval in seconds';
+  }
+
   document.getElementById('sched-days').value = s.days || 'Every Day';
   document.getElementById('sched-priority').value = s.priority || '2';
   document.getElementById('sched-active').checked = s.is_active === 1 || s.is_active === true;
@@ -1389,13 +1559,27 @@ async function handleScheduleSubmit() {
   const selectedAd = adsList.find(a => a.id === adId);
   const adTitle = selectedAd ? selectedAd.title : 'Scheduled Ad';
 
+  const durModeEl = document.getElementById('sched-duration-mode');
+  let durationSec = 0;
+  if (durModeEl) {
+    if (durModeEl.value === 'full_time') {
+      durationSec = 0;
+    } else if (durModeEl.value === 'custom') {
+      durationSec = parseInt(document.getElementById('sched-duration').value || '30');
+    } else {
+      durationSec = parseInt(durModeEl.value || '30');
+    }
+  } else {
+    durationSec = parseInt(document.getElementById('sched-duration').value || '0');
+  }
+
   const payload = {
     advertisement_id: adId,
     ad_title: adTitle,
     display_page_id: parseInt(document.getElementById('sched-page-id').value || 1),
     start_time: document.getElementById('sched-start-time').value,
     end_time: document.getElementById('sched-end-time').value,
-    duration_sec: parseInt(document.getElementById('sched-duration').value || 30),
+    duration_sec: durationSec,
     days: document.getElementById('sched-days').value,
     priority: parseInt(document.getElementById('sched-priority').value || 2),
     is_active: document.getElementById('sched-active').checked ? 1 : 0
