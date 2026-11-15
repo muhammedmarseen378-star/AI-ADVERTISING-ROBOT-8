@@ -292,6 +292,47 @@ function setupActionListeners() {
       await handleScheduleSubmit();
     });
   }
+  // Initialize Category Symbol Picker Palette
+  initCategorySymbolPicker();
+}
+
+const CATEGORY_SYMBOLS = [
+  '🏷️', '🛍️', '🛒', '📦', '🎁', '💎', '🏬', '🏢', '💳', '✨',
+  '💻', '📱', '⚡', '🎧', '📷', '📺', '🎮', '🤖', '🔋', '⌨️', '🖱️', '🖨️', '⌚',
+  '🍔', '🍕', '☕', '🍹', '🍰', '🍦', '🥗', '🍱', '🍜', '🍎', '🍞', '🍿', '🍩',
+  '👗', '👟', '👕', '👠', '💄', '💇', '💍', '👜', '👓', '🧢',
+  '💊', '🩺', '💪', '🏋️', '🧘', '🚴', '⚽', '🏆', '🌿', '🧴',
+  '🚗', '🛵', '🚲', '✈️', '🚀', '🚢', '⛽', '🏖️', '🚆',
+  '🔧', '🔨', '💼', '🎓', '📚', '🎨', '🎵', '🏠', '🛋️', '💡', '🔑', '🧰'
+];
+
+function initCategorySymbolPicker() {
+  const container = document.getElementById('category-symbol-picker');
+  const iconInput = document.getElementById('cat-icon');
+  const iconPreview = document.getElementById('cat-icon-preview');
+  if (!container || !iconInput) return;
+
+  container.innerHTML = CATEGORY_SYMBOLS.map(sym => `
+    <button type="button" class="btn-symbol-chip" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; font-size: 18px; padding: 4px; cursor: pointer; transition: all 0.2s;" data-symbol="${sym}">${sym}</button>
+  `).join('');
+
+  container.querySelectorAll('.btn-symbol-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const sym = btn.getAttribute('data-symbol');
+      iconInput.value = sym;
+      if (iconPreview) iconPreview.textContent = sym;
+      container.querySelectorAll('.btn-symbol-chip').forEach(b => {
+        b.style.borderColor = 'rgba(255,255,255,0.12)';
+        b.style.background = 'rgba(255,255,255,0.06)';
+      });
+      btn.style.borderColor = 'var(--cyan-primary)';
+      btn.style.background = 'rgba(0, 240, 255, 0.25)';
+    });
+  });
+
+  iconInput.addEventListener('input', (e) => {
+    if (iconPreview) iconPreview.textContent = e.target.value.trim() || '🏷️';
+  });
 }
 
 window.deleteCategory = async (id) => {
