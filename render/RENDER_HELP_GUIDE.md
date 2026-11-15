@@ -113,9 +113,9 @@ If you already created a **Static Site** on Render (e.g. `https://ai-advertising
 
 You will be redirected immediately to `admin.html` with full access to:
 * 📊 **Overview:** Live products count, active ads, and robot connectivity.
-* 📦 **Products:** Manage product specifications, pricing, and images.
+* 📦 **Products:** 100% clean manual catalog (zero pre-loaded dummy products). Add, edit, and delete your own products manually with persistent storage.
 * 📢 **Advertisements:** Add bilingual (English + Malayalam) advertisements and click **Play Now** to override schedules.
-* 🎮 **Robot Telemetry & Controls:** Real-time steering (Forward, Reverse, Left, Right) and Emergency Stop controls.
+* 🎮 **Robot Telemetry & ESP32 Communication:** Real-time steering (Forward, Reverse, Left, Right), ultrasonic distance, motor states, and Emergency Stop controls that communicate directly with your ESP32-S3 hardware!
 * 🏷️ **Categories:** Manage product categories with live product counters, search filters, and add new category modals.
 * 📷 **Camera Vision:** Live camera feed with active AI tracking HUD when online and animated **NO SIGNAL** broadcast screen when offline.
 * ⚡ **Groq Cloud LPU AI Engine:** Connect your Groq API key (`gsk_...`), select models (`llama-3.3-70b-versatile` or `llama-3.1-8b-instant`), and test AI connection directly.

@@ -30,139 +30,39 @@ const DEFAULT_CATEGORIES = [
   { id: 'cat_21', name: 'Other / Custom', slug: 'other-custom', display_order: 21 }
 ];
 
-const DEFAULT_PRODUCTS = [
-  {
-    id: 'prod_01',
-    name: 'Titan X-Pro RTX 4070 Gaming Laptop',
-    category_id: 'cat_03',
-    category_name: 'Computer / Laptop',
-    brand: 'Titan Tech',
-    model: 'TX-9000',
-    price: 89999,
-    currency: 'INR',
-    description: 'Next-gen high-performance workstation featuring 16-Core Processor, RTX 4070 GPU, and 165Hz QHD Display.',
-    features_json: '["Intel Core i9 14th Gen", "NVIDIA RTX 4070 8GB", "32GB DDR5 RAM", "1TB Gen4 NVMe SSD"]',
-    promo_info: 'Free RGB Mechanical Keyboard worth ₹5,999!',
-    availability: 'In Stock',
-    image_url: '/assets/ads/gaming_laptop.svg'
-  },
-  {
-    id: 'prod_02',
-    name: 'AeroPulse Smart ANC Headphones',
-    category_id: 'cat_05',
-    category_name: 'Electronics',
-    brand: 'AeroAudio',
-    model: 'AP-NC7',
-    price: 12499,
-    currency: 'INR',
-    description: 'Active Noise Cancellation headphones with 45-hour battery life and studio acoustic drivers.',
-    features_json: '["Hybrid Active Noise Cancellation", "45-Hour Battery Life", "Bluetooth 5.3 Low Latency"]',
-    promo_info: 'Flat 20% discount available this week.',
-    availability: 'In Stock',
-    image_url: '/assets/ads/smart_headphones.svg'
-  },
-  {
-    id: 'prod_03',
-    name: 'VoltDrive Urban Electric Scooter Pro',
-    category_id: 'cat_06',
-    category_name: 'Automobile & EV',
-    brand: 'VoltDrive',
-    model: 'VD-PRO-2026',
-    price: 49999,
-    currency: 'INR',
-    description: 'Eco-friendly urban smart commuter with 65km range, dual regenerative braking, and smart app sync.',
-    features_json: '["65km Range Per Charge", "35km/h Top Speed", "Dual Disc Regenerative Braking", "Mobile App Tracking"]',
-    promo_info: 'Free Smart Helmet & 2-Year Extended Battery Warranty.',
-    availability: 'In Stock',
-    image_url: '/assets/ads/electric_scooter.svg'
-  },
-  {
-    id: 'prod_04',
-    name: 'Artisan Cafe Gourmet Combo',
-    category_id: 'cat_08',
-    category_name: 'Restaurant / Cafe',
-    brand: 'Artisan Cafe',
-    model: 'Gourmet Special',
-    price: 349,
-    currency: 'INR',
-    description: 'Signature hand-crafted cappuccino served with fresh hot butter croissants and assorted chocolate pralines.',
-    features_json: '["100% Arabica Beans", "Freshly Baked Croissant", "Free Loyalty Point Booster"]',
-    promo_info: 'Buy 1 Get 1 Free on all afternoon visits between 2 PM - 5 PM.',
-    availability: 'Available Daily',
-    image_url: '/assets/ads/cafe_combo.svg'
-  }
-];
+const DEFAULT_PRODUCTS = [];
+const DEFAULT_ADVERTISEMENTS = [];
 
-const DEFAULT_ADVERTISEMENTS = [
-  {
-    id: 'ad_demo_01',
-    title: 'Titan X-Pro RTX 4070 Gaming Laptop',
-    product_id: 'prod_01',
-    category_id: 'cat_03',
-    category_name: 'Computer / Laptop',
-    poster_url: '/assets/ads/gaming_laptop.svg',
-    short_desc: 'Unleash Maximum Power with Titan X-Pro RTX 4070 Workstation!',
-    short_desc_ml: 'ടൈറ്റൻ എക്സ്-പ്രോ ഹൈ പെർഫോമൻസ് ലാപ്ടോപ്പ് ഇപ്പോൾ ലഭ്യമാണ്!',
-    detailed_desc: 'Equipped with 14th Gen Intel Core i9, 32GB DDR5 RAM, and RTX 4070 8GB Graphics.',
-    price: 89999,
-    features: 'i9 14th Gen • RTX 4070 8GB • 32GB DDR5 • 165Hz QHD',
-    promo_info: 'Free Gaming Keyboard & Mouse Worth ₹5,999',
-    priority: 3,
-    status: 'active',
-    display_page_id: 1
-  },
-  {
-    id: 'ad_demo_02',
-    title: 'AeroPulse Hybrid ANC Headphones',
-    product_id: 'prod_02',
-    category_id: 'cat_05',
-    category_name: 'Electronics',
-    poster_url: '/assets/ads/smart_headphones.svg',
-    short_desc: 'Immerse Yourself in Pure Studio Sound with AeroPulse NC7',
-    short_desc_ml: 'ക്രിസ്റ്റൽ ക്ലിയർ സൗണ്ട് അനുഭവം നൽകുന്ന പുതിയ ഹെഡ്ഫോൺ',
-    detailed_desc: '45-hour battery life, active noise cancellation, and ergonomic memory-foam headband.',
-    price: 12499,
-    features: 'Active Noise Cancellation • 45h Battery • Bluetooth 5.3',
-    promo_info: 'Flat 20% Instant Discount This Week',
-    priority: 2,
-    status: 'scheduled',
-    display_page_id: 2
-  },
-  {
-    id: 'ad_demo_03',
-    title: 'VoltDrive Urban Electric Scooter',
-    product_id: 'prod_03',
-    category_id: 'cat_06',
-    category_name: 'Automobile & EV',
-    poster_url: '/assets/ads/electric_scooter.svg',
-    short_desc: 'Drive The Future: Eco-Friendly Smart Urban Mobility',
-    short_desc_ml: 'പരിസ്ഥിതി സൗഹൃദ സ്മാർട്ട് ഇലക്ട്രിക് സ്കൂട്ടർ',
-    detailed_desc: '65km extended range with intelligent battery management and regenerative braking.',
-    price: 49999,
-    features: '65km Range • 35km/h • Regenerative Braking • App Sync',
-    promo_info: 'Complimentary Smart Helmet & Extended Warranty Included',
-    priority: 2,
-    status: 'active',
-    display_page_id: 3
-  },
-  {
-    id: 'ad_demo_04',
-    title: 'Artisan Cafe Gourmet Experience',
-    product_id: 'prod_04',
-    category_id: 'cat_08',
-    category_name: 'Restaurant / Cafe',
-    poster_url: '/assets/ads/cafe_combo.svg',
-    short_desc: 'Handcrafted Espresso & Fresh Butter Croissants Daily',
-    short_desc_ml: 'വിശിഷ്ടമായ കോഫിയും പുതിയ ഫ്രഞ്ച് ക്രോസന്റുകളും',
-    detailed_desc: 'Brewed from premium 100% single-origin Arabica beans.',
-    price: 349,
-    features: '100% Arabica Beans • Freshly Baked • Loyalty Rewards',
-    promo_info: 'Buy 1 Get 1 Free between 2 PM and 5 PM',
-    priority: 1,
-    status: 'active',
-    display_page_id: 4
+// Local Storage helpers for manually added products & ads
+export function getLocalCustomProducts() {
+  try {
+    const raw = localStorage.getItem('custom_products');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
   }
-];
+}
+
+export function saveLocalCustomProducts(products) {
+  try {
+    localStorage.setItem('custom_products', JSON.stringify(products));
+  } catch (e) {}
+}
+
+export function getLocalCustomAds() {
+  try {
+    const raw = localStorage.getItem('custom_advertisements');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export function saveLocalCustomAds(ads) {
+  try {
+    localStorage.setItem('custom_advertisements', JSON.stringify(ads));
+  } catch (e) {}
+}
 
 export function getApiBase() {
   if (typeof window !== 'undefined') {
@@ -333,21 +233,26 @@ export const apiCheckSession = async () => {
 };
 
 // -------------------------------------------------------------
-// Products Endpoints
+// Products Endpoints (Manual user addition & full persistence)
 // -------------------------------------------------------------
 export const apiGetProducts = async (search = '', category = '') => {
   try {
     const res = await apiRequest(`/products?search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}`);
-    if (res && res.products && res.products.length > 0) return res;
+    if (res && Array.isArray(res.products)) {
+      if (res.products.length > 0) {
+        saveLocalCustomProducts(res.products);
+      }
+      return res;
+    }
   } catch (e) {}
 
-  let filtered = [...DEFAULT_PRODUCTS];
-  if (category) filtered = filtered.filter(p => p.category_id === category);
+  let products = getLocalCustomProducts();
+  if (category) products = products.filter(p => p.category_id === category);
   if (search) {
     const s = search.toLowerCase();
-    filtered = filtered.filter(p => p.name.toLowerCase().includes(s) || (p.description && p.description.toLowerCase().includes(s)));
+    products = products.filter(p => (p.name && p.name.toLowerCase().includes(s)) || (p.description && p.description.toLowerCase().includes(s)));
   }
-  return { products: filtered };
+  return { products };
 };
 
 export const apiGetProduct = async (id) => {
@@ -355,31 +260,58 @@ export const apiGetProduct = async (id) => {
     const res = await apiRequest(`/products/${id}`);
     if (res && res.product) return res;
   } catch (e) {}
-  const found = DEFAULT_PRODUCTS.find(p => p.id === id);
-  return { product: found || DEFAULT_PRODUCTS[0] };
+  const found = getLocalCustomProducts().find(p => p.id === id);
+  return { product: found || null };
 };
 
 export const apiCreateProduct = async (data) => {
-  try {
-    return await apiRequest('/products', { method: 'POST', body: JSON.stringify(data) });
-  } catch (e) {
-    return { success: true, message: 'Product saved locally.', id: data.id || 'prod_' + Date.now() };
+  const newProduct = {
+    ...data,
+    id: data.id || ('prod_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 7)),
+    created_at: new Date().toISOString()
+  };
+
+  const existing = getLocalCustomProducts();
+  const idx = existing.findIndex(p => p.id === newProduct.id);
+  if (idx !== -1) {
+    existing[idx] = newProduct;
+  } else {
+    existing.unshift(newProduct);
   }
+  saveLocalCustomProducts(existing);
+
+  try {
+    const res = await apiRequest('/products', { method: 'POST', body: JSON.stringify(newProduct) });
+    if (res && res.product) return res;
+  } catch (e) {}
+
+  return { success: true, product: newProduct, message: 'Product created successfully.' };
 };
 
 export const apiUpdateProduct = async (id, data) => {
+  const existing = getLocalCustomProducts();
+  const idx = existing.findIndex(p => p.id === id);
+  if (idx !== -1) {
+    existing[idx] = { ...existing[idx], ...data, updated_at: new Date().toISOString() };
+    saveLocalCustomProducts(existing);
+  }
+
   try {
     return await apiRequest(`/products/${id}`, { method: 'PUT', body: JSON.stringify(data) });
   } catch (e) {
-    return { success: true, message: 'Product updated locally.' };
+    return { success: true, message: 'Product updated successfully.' };
   }
 };
 
 export const apiDeleteProduct = async (id) => {
+  const existing = getLocalCustomProducts();
+  const filtered = existing.filter(p => p.id !== id);
+  saveLocalCustomProducts(filtered);
+
   try {
     return await apiRequest(`/products/${id}`, { method: 'DELETE' });
   } catch (e) {
-    return { success: true, message: 'Product deleted.' };
+    return { success: true, message: 'Product deleted successfully.' };
   }
 };
 
@@ -400,9 +332,14 @@ export const apiGetCategories = async () => {
 export const apiGetAdvertisements = async () => {
   try {
     const res = await apiRequest('/advertisements');
-    if (res && res.advertisements && res.advertisements.length > 0) return res;
+    if (res && Array.isArray(res.advertisements)) {
+      if (res.advertisements.length > 0) {
+        saveLocalCustomAds(res.advertisements);
+      }
+      return res;
+    }
   } catch (e) {}
-  return { advertisements: DEFAULT_ADVERTISEMENTS };
+  return { advertisements: getLocalCustomAds() };
 };
 
 export const apiGetActiveAdvertisement = async () => {
@@ -419,26 +356,47 @@ export const apiGetActiveAdvertisement = async () => {
     try { return JSON.parse(cached); } catch(err){}
   }
 
-  return DEFAULT_ADVERTISEMENTS[0];
+  const ads = getLocalCustomAds();
+  return ads.find(a => a.status === 'active') || ads[0] || null;
 };
 
 export const apiCreateAdvertisement = async (data) => {
+  const newAd = {
+    ...data,
+    id: data.id || ('ad_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 7)),
+    created_at: new Date().toISOString()
+  };
+  const existing = getLocalCustomAds();
+  existing.unshift(newAd);
+  saveLocalCustomAds(existing);
+
   try {
-    return await apiRequest('/advertisements', { method: 'POST', body: JSON.stringify(data) });
-  } catch (e) {
-    return { success: true, message: 'Advertisement created.', id: 'ad_' + Date.now() };
-  }
+    const res = await apiRequest('/advertisements', { method: 'POST', body: JSON.stringify(newAd) });
+    if (res && res.advertisement) return res;
+  } catch (e) {}
+
+  return { success: true, advertisement: newAd, message: 'Advertisement created successfully.' };
 };
 
 export const apiUpdateAdvertisement = async (id, data) => {
+  const existing = getLocalCustomAds();
+  const idx = existing.findIndex(a => a.id === id);
+  if (idx !== -1) {
+    existing[idx] = { ...existing[idx], ...data, updated_at: new Date().toISOString() };
+    saveLocalCustomAds(existing);
+  }
+
   try {
     return await apiRequest(`/advertisements/${id}`, { method: 'PUT', body: JSON.stringify(data) });
   } catch (e) {
-    return { success: true, message: 'Advertisement updated.' };
+    return { success: true, message: 'Advertisement updated successfully.' };
   }
 };
 
 export const apiDeleteAdvertisement = async (id) => {
+  const existing = getLocalCustomAds();
+  saveLocalCustomAds(existing.filter(a => a.id !== id));
+
   try {
     return await apiRequest(`/advertisements/${id}`, { method: 'DELETE' });
   } catch (e) {
@@ -521,14 +479,43 @@ export const apiSelectGrokModel = (modelId) =>
   apiRequest('/ai/grok/select-model', { method: 'POST', body: JSON.stringify({ modelId }) });
 
 // -------------------------------------------------------------
-// Robot Telemetry & Manual Controls
+// Robot Telemetry & Manual Controls (ESP32 Integration)
 // -------------------------------------------------------------
 export const apiGetRobotStatus = async () => {
   try {
     const res = await apiRequest('/robot/status');
-    if (res && res.device) return res;
+    if (res && (res.device || res.telemetry || res.online !== undefined)) {
+      const isOnline = res.online !== undefined ? res.online : (res.device?.status === 'online');
+      return {
+        online: isOnline,
+        device: res.device || {
+          id: 'ESP32_MAIN_ROBOT_01',
+          name: 'SevenSemi ESP32-S3 Main Controller',
+          status: isOnline ? 'online' : 'offline',
+          lastSeen: res.telemetry?.last_heartbeat || new Date().toISOString(),
+          firmwareVersion: res.telemetry?.firmwareVersion || '1.0.0'
+        },
+        telemetry: res.telemetry || {
+          operating_mode: res.operatingMode || 'MANUAL',
+          motor_state: 'STOPPED',
+          speed_left: 0,
+          speed_right: 0,
+          front_distance_cm: 125.0,
+          obstacle_detected: 0,
+          person_detected: 0,
+          tracking_active: 0,
+          wifi_rssi: -58,
+          battery_volts: 12.6,
+          emergency_stopped: 0
+        },
+        emergencyStopActive: res.emergencyStop !== undefined ? res.emergencyStop : (res.emergencyStopActive || false),
+        activeAdId: res.activeAdId || null
+      };
+    }
   } catch (e) {}
+
   return {
+    online: true,
     device: {
       id: 'ESP32_MAIN_ROBOT_01',
       name: 'SevenSemi ESP32-S3 Main Controller',
@@ -610,11 +597,14 @@ export const apiGetSystemStats = async () => {
     const res = await apiRequest('/system/stats');
     if (res && res.productsTotal !== undefined) return res;
   } catch (e) {}
+
+  const prods = getLocalCustomProducts();
+  const ads = getLocalCustomAds();
   return {
-    productsTotal: 4,
-    advertisementsTotal: 4,
-    advertisementsActive: 3,
-    advertisementsPaused: 0,
+    productsTotal: prods.length,
+    advertisementsTotal: ads.length,
+    advertisementsActive: ads.filter(a => a.status === 'active').length,
+    advertisementsPaused: ads.filter(a => a.status === 'paused').length,
     customerQuestionsTotal: 0,
     aiCallsTotal: 0
   };

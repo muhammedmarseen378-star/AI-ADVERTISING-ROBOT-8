@@ -289,14 +289,14 @@ async function pollTelemetry() {
     const data = await apiGetRobotStatus();
     if (!data) return;
 
-    const isOnline = data.device.status === 'online';
-    const isEstop = data.emergencyStopActive;
+    const isOnline = (data.online !== undefined ? data.online : (data.device?.status === 'online'));
+    const isEstop = !!data.emergencyStopActive;
 
     // Top status badges
     const dot = document.getElementById('top-robot-dot');
     const text = document.getElementById('top-robot-text');
     if (dot) dot.className = `status-dot ${isOnline ? 'online' : 'offline'}`;
-    if (text) text.textContent = isOnline ? 'Robot Online' : 'Robot Offline';
+    if (text) text.textContent = isOnline ? 'Robot Online (ESP32)' : 'Robot Offline';
 
     // Emergency Stop Banner
     const estopBanner = document.getElementById('global-estop-banner');
@@ -305,9 +305,9 @@ async function pollTelemetry() {
     }
 
     // Live Telemetry Readouts
-    const telem = data.telemetry;
+    const telem = data.telemetry || {};
     const distEl = document.getElementById('telem-distance');
-    if (distEl) distEl.textContent = telem.front_distance_cm > 0 ? `${telem.front_distance_cm.toFixed(1)} cm` : 'Clear (>200cm)';
+    if (distEl) distEl.textContent = (telem.front_distance_cm !== undefined && telem.front_distance_cm > 0) ? `${Number(telem.front_distance_cm).toFixed(1)} cm` : 'Clear (>200cm)';
 
     const motorEl = document.getElementById('telem-motor');
     if (motorEl) motorEl.textContent = telem.motor_state || 'STOPPED';
@@ -431,7 +431,17 @@ function renderProductsTable() {
   if (!tbody) return;
 
   if (productsList.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">No products found in this category. Add your first product above.</td></tr>';
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 48px 20px; color: var(--text-muted);">
+          <div style="font-size: 32px; margin-bottom: 12px;">📦</div>
+          <div style="font-size: 15px; font-weight: 700; color: #e2e8f0; margin-bottom: 6px;">No Products Added Yet</div>
+          <p style="font-size: 13px; color: #94a3b8; max-width: 440px; margin: 0 auto 16px;">
+            Your product catalog is empty. Click <strong>"+ Add Product"</strong> above to manually create your first product.
+          </p>
+        </td>
+      </tr>
+    `;
     return;
   }
 
