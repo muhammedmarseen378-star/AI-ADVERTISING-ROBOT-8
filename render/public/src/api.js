@@ -6,29 +6,26 @@
 const ADMIN_EMAIL = 'nttf.ttc.m3b.group1.project@gmail.com';
 const ADMIN_PASS = 'group_1@nttf';
 
-const DEFAULT_CATEGORIES = [
-  { id: 'cat_01', name: 'Food & Beverage', slug: 'food-beverage', display_order: 1 },
-  { id: 'cat_02', name: 'Education & Training', slug: 'education-training', display_order: 2 },
-  { id: 'cat_03', name: 'Computer / Laptop', slug: 'computer-laptop', display_order: 3 },
-  { id: 'cat_04', name: 'Mobile / Smartphone', slug: 'mobile-smartphone', display_order: 4 },
-  { id: 'cat_05', name: 'Electronics', slug: 'electronics', display_order: 5 },
-  { id: 'cat_06', name: 'Automobile & EV', slug: 'automobile-ev', display_order: 6 },
-  { id: 'cat_07', name: 'Hotel / Resort', slug: 'hotel-resort', display_order: 7 },
-  { id: 'cat_08', name: 'Restaurant / Cafe', slug: 'restaurant-cafe', display_order: 8 },
-  { id: 'cat_09', name: 'Clothing / Fashion', slug: 'clothing-fashion', display_order: 9 },
-  { id: 'cat_10', name: 'Home Appliances', slug: 'home-appliances', display_order: 10 },
-  { id: 'cat_11', name: 'Healthcare / Pharmacy', slug: 'healthcare-pharmacy', display_order: 11 },
-  { id: 'cat_12', name: 'Fitness / Gym', slug: 'fitness-gym', display_order: 12 },
-  { id: 'cat_13', name: 'Salon / Beauty', slug: 'salon-beauty', display_order: 13 },
-  { id: 'cat_14', name: 'Retail / Shopping', slug: 'retail-shopping', display_order: 14 },
-  { id: 'cat_15', name: 'Finance / Banking', slug: 'finance-banking', display_order: 15 },
-  { id: 'cat_16', name: 'Travel / Tourism', slug: 'travel-tourism', display_order: 16 },
-  { id: 'cat_17', name: 'Real Estate', slug: 'real-estate', display_order: 17 },
-  { id: 'cat_18', name: 'Service / Repair', slug: 'service-repair', display_order: 18 },
-  { id: 'cat_19', name: 'Coaching / Workshops', slug: 'coaching-workshops', display_order: 19 },
-  { id: 'cat_20', name: 'Gaming / Esports', slug: 'gaming-esports', display_order: 20 },
-  { id: 'cat_21', name: 'Other / Custom', slug: 'other-custom', display_order: 21 }
-];
+const DEFAULT_CATEGORIES = [];
+
+// Local Storage helpers for categories
+export function getLocalCustomCategories() {
+  try {
+    const raw = localStorage.getItem('custom_categories');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(c => !c.id.startsWith('cat_0') && !c.id.startsWith('cat_1') && !c.id.startsWith('cat_2')) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export function saveLocalCustomCategories(categories) {
+  try {
+    const cleaned = (categories || []).filter(c => !c.id.startsWith('cat_0') && !c.id.startsWith('cat_1') && !c.id.startsWith('cat_2'));
+    localStorage.setItem('custom_categories', JSON.stringify(cleaned));
+  } catch (e) {}
+}
 
 const DEFAULT_PRODUCTS = [];
 const DEFAULT_ADVERTISEMENTS = [];
@@ -352,9 +349,56 @@ export const apiAiProductResearch = (payload) =>
 export const apiGetCategories = async () => {
   try {
     const res = await apiRequest('/categories');
-    if (res && res.categories && res.categories.length > 0) return res;
+    if (res && Array.isArray(res.categories)) {
+      const clean = res.categories.filter(c => !c.id.startsWith('cat_0') && !c.id.startsWith('cat_1') && !c.id.startsWith('cat_2'));
+      saveLocalCustomCategories(clean);
+      return { categories: clean };
+    }
   } catch (e) {}
-  return { categories: DEFAULT_CATEGORIES };
+  return { categories: getLocalCustomCategories() };
+};
+
+export const apiCreateCategory = async (data) => {
+  const newCat = {
+    id: data.id || ('cat_' + Date.now().toString(36)),
+    name: data.name,
+    slug: data.slug || data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    icon: data.icon || '🏷️',
+    display_order: data.display_order || 1
+  };
+  const existing = getLocalCustomCategories();
+  existing.push(newCat);
+  saveLocalCustomCategories(existing);
+
+  try {
+    const res = await apiRequest('/categories', { method: 'POST', body: JSON.stringify(newCat) });
+    if (res && res.category) return res;
+  } catch (e) {}
+  return { success: true, category: newCat };
+};
+
+export const apiUpdateCategory = async (id, data) => {
+  const existing = getLocalCustomCategories();
+  const idx = existing.findIndex(c => c.id === id);
+  if (idx !== -1) {
+    existing[idx] = { ...existing[idx], ...data };
+    saveLocalCustomCategories(existing);
+  }
+  try {
+    return await apiRequest(`/categories/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  } catch (e) {
+    return { success: true, category: existing[idx] };
+  }
+};
+
+export const apiDeleteCategory = async (id) => {
+  const existing = getLocalCustomCategories();
+  saveLocalCustomCategories(existing.filter(c => c.id !== id));
+  try {
+    return await apiRequest(`/categories/${id}`, { method: 'DELETE' });
+  } catch (e) {
+    return { success: true, message: 'Category deleted successfully.' };
+  }
 };
 
 // -------------------------------------------------------------
@@ -455,6 +499,91 @@ export const apiResumeAd = async (id) => {
     return await apiRequest(`/advertisements/${id}/resume`, { method: 'POST' });
   } catch (e) {
     return { success: true, message: 'Ad resumed.' };
+  }
+};
+
+// -------------------------------------------------------------
+// Advertisement Schedules Endpoints
+// -------------------------------------------------------------
+export function getLocalCustomSchedules() {
+  try {
+    const raw = localStorage.getItem('custom_schedules');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export function saveLocalCustomSchedules(schedules) {
+  try {
+    localStorage.setItem('custom_schedules', JSON.stringify(schedules || []));
+  } catch (e) {}
+}
+
+export const apiGetSchedules = async () => {
+  try {
+    const res = await apiRequest('/schedules');
+    if (res && Array.isArray(res.schedules)) {
+      saveLocalCustomSchedules(res.schedules);
+      return { schedules: res.schedules };
+    }
+  } catch (e) {}
+  return { schedules: getLocalCustomSchedules() };
+};
+
+export const apiCreateSchedule = async (data) => {
+  const newSched = {
+    ...data,
+    id: data.id || ('sched_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6)),
+    is_active: data.is_active !== undefined ? (data.is_active ? 1 : 0) : 1,
+    created_at: new Date().toISOString()
+  };
+  const existing = getLocalCustomSchedules();
+  existing.unshift(newSched);
+  saveLocalCustomSchedules(existing);
+
+  try {
+    const res = await apiRequest('/schedules', { method: 'POST', body: JSON.stringify(newSched) });
+    if (res && res.schedule) return res;
+  } catch (e) {}
+  return { success: true, schedule: newSched, message: 'Schedule rule created successfully.' };
+};
+
+export const apiUpdateSchedule = async (id, data) => {
+  const existing = getLocalCustomSchedules();
+  const idx = existing.findIndex(s => s.id === id);
+  if (idx !== -1) {
+    existing[idx] = { ...existing[idx], ...data, updated_at: new Date().toISOString() };
+    saveLocalCustomSchedules(existing);
+  }
+  try {
+    return await apiRequest(`/schedules/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  } catch (e) {
+    return { success: true, schedule: existing[idx] };
+  }
+};
+
+export const apiDeleteSchedule = async (id) => {
+  const existing = getLocalCustomSchedules();
+  saveLocalCustomSchedules(existing.filter(s => s.id !== id));
+  try {
+    return await apiRequest(`/schedules/${id}`, { method: 'DELETE' });
+  } catch (e) {
+    return { success: true, message: 'Schedule deleted successfully.' };
+  }
+};
+
+export const apiToggleSchedule = async (id) => {
+  const existing = getLocalCustomSchedules();
+  const found = existing.find(s => s.id === id);
+  if (found) {
+    found.is_active = found.is_active ? 0 : 1;
+    saveLocalCustomSchedules(existing);
+  }
+  try {
+    return await apiRequest(`/schedules/${id}/toggle`, { method: 'POST' });
+  } catch (e) {
+    return { success: true, schedule: found };
   }
 };
 

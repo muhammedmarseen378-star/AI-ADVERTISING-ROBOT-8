@@ -38,31 +38,10 @@ let state = {
     last_heartbeat: new Date().toISOString()
   },
   pendingCommands: [],
-  categories: [
-    { id: 'cat_01', name: 'Food & Beverage', slug: 'food-beverage' },
-    { id: 'cat_02', name: 'Education & Training', slug: 'education-training' },
-    { id: 'cat_03', name: 'Computer / Laptop', slug: 'computer-laptop' },
-    { id: 'cat_04', name: 'Mobile / Smartphone', slug: 'mobile-smartphone' },
-    { id: 'cat_05', name: 'Electronics', slug: 'electronics' },
-    { id: 'cat_06', name: 'Automobile & EV', slug: 'automobile-ev' },
-    { id: 'cat_07', name: 'Hotel / Resort', slug: 'hotel-resort' },
-    { id: 'cat_08', name: 'Restaurant / Cafe', slug: 'restaurant-cafe' },
-    { id: 'cat_09', name: 'Clothing / Fashion', slug: 'clothing-fashion' },
-    { id: 'cat_10', name: 'Home Appliances', slug: 'home-appliances' },
-    { id: 'cat_11', name: 'Healthcare / Pharmacy', slug: 'healthcare-pharmacy' },
-    { id: 'cat_12', name: 'Fitness / Gym', slug: 'fitness-gym' },
-    { id: 'cat_13', name: 'Salon / Beauty', slug: 'salon-beauty' },
-    { id: 'cat_14', name: 'Retail / Shopping', slug: 'retail-shopping' },
-    { id: 'cat_15', name: 'Finance / Banking', slug: 'finance-banking' },
-    { id: 'cat_16', name: 'Travel / Tourism', slug: 'travel-tourism' },
-    { id: 'cat_17', name: 'Real Estate', slug: 'real-estate' },
-    { id: 'cat_18', name: 'Service / Repair', slug: 'service-repair' },
-    { id: 'cat_19', name: 'Coaching / Workshops', slug: 'coaching-workshops' },
-    { id: 'cat_20', name: 'Gaming / Esports', slug: 'gaming-esports' },
-    { id: 'cat_21', name: 'Other / Custom', slug: 'other-custom' }
-  ],
+  categories: [],
   products: [],
-  advertisements: []
+  advertisements: [],
+  schedules: []
 };
 
 // Load saved data if exists
@@ -71,6 +50,13 @@ try {
     const raw = fs.readFileSync(DATA_FILE, 'utf8');
     const parsed = JSON.parse(raw);
     state = { ...state, ...parsed };
+    // Eliminate any legacy dummy categories
+    if (Array.isArray(state.categories)) {
+      state.categories = state.categories.filter(c => !c.id.startsWith('cat_0') && !c.id.startsWith('cat_1') && !c.id.startsWith('cat_2'));
+    }
+    if (!Array.isArray(state.schedules)) {
+      state.schedules = [];
+    }
     console.log('[Store] State loaded from persistent file');
   }
 } catch (e) {
@@ -490,11 +476,92 @@ const server = http.createServer(async (req, res) => {
         id: data.id || 'cat_' + Date.now().toString(36),
         name: data.name,
         slug: data.slug || data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        icon: data.icon || '🏷️',
         display_order: state.categories.length + 1
       };
       state.categories.push(newCat);
       persistState();
       return sendJson(res, { success: true, category: newCat }, 201);
+    }
+
+    if (pathname.startsWith('/api/categories/') && method === 'PUT') {
+      const catId = pathname.replace('/api/categories/', '');
+      const body = await parseJsonBody(req);
+      const idx = state.categories.findIndex(c => c.id === catId);
+      if (idx !== -1) {
+        state.categories[idx] = { ...state.categories[idx], ...body, updated_at: new Date().toISOString() };
+        persistState();
+        return sendJson(res, { success: true, category: state.categories[idx], message: 'Category updated.' });
+      }
+      return sendJson(res, { error: 'Category not found' }, 404);
+    }
+
+    if (pathname.startsWith('/api/categories/') && method === 'DELETE') {
+      const catId = pathname.replace('/api/categories/', '');
+      state.categories = state.categories.filter(c => c.id !== catId);
+      persistState();
+      return sendJson(res, { success: true, message: 'Category deleted successfully.' });
+    }
+
+    // -------------------------------------------------------------
+    // Advertisement Schedules Endpoints
+    // -------------------------------------------------------------
+    if (pathname === '/api/schedules' && method === 'GET') {
+      return sendJson(res, { schedules: state.schedules || [] });
+    }
+
+    if (pathname === '/api/schedules' && method === 'POST') {
+      const body = await parseJsonBody(req);
+      const newSchedule = {
+        id: body.id || ('sched_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6)),
+        advertisement_id: body.advertisement_id || '',
+        ad_title: body.ad_title || '',
+        display_page_id: parseInt(body.display_page_id || 1),
+        start_time: body.start_time || '09:00',
+        end_time: body.end_time || '21:00',
+        duration_sec: parseInt(body.duration_sec || 30),
+        days: body.days || 'Every Day',
+        priority: parseInt(body.priority || 2),
+        is_active: body.is_active !== undefined ? (body.is_active ? 1 : 0) : 1,
+        created_at: new Date().toISOString()
+      };
+      if (!state.schedules) state.schedules = [];
+      state.schedules.push(newSchedule);
+      persistState();
+      return sendJson(res, { success: true, schedule: newSchedule }, 201);
+    }
+
+    if (pathname.startsWith('/api/schedules/') && pathname.endsWith('/toggle') && method === 'POST') {
+      const schedId = pathname.split('/')[3];
+      if (!state.schedules) state.schedules = [];
+      const found = state.schedules.find(s => s.id === schedId);
+      if (found) {
+        found.is_active = found.is_active ? 0 : 1;
+        persistState();
+        return sendJson(res, { success: true, schedule: found });
+      }
+      return sendJson(res, { error: 'Schedule not found' }, 404);
+    }
+
+    if (pathname.startsWith('/api/schedules/') && method === 'PUT') {
+      const schedId = pathname.replace('/api/schedules/', '');
+      const body = await parseJsonBody(req);
+      if (!state.schedules) state.schedules = [];
+      const idx = state.schedules.findIndex(s => s.id === schedId);
+      if (idx !== -1) {
+        state.schedules[idx] = { ...state.schedules[idx], ...body, updated_at: new Date().toISOString() };
+        persistState();
+        return sendJson(res, { success: true, schedule: state.schedules[idx] });
+      }
+      return sendJson(res, { error: 'Schedule not found' }, 404);
+    }
+
+    if (pathname.startsWith('/api/schedules/') && method === 'DELETE') {
+      const schedId = pathname.replace('/api/schedules/', '');
+      if (!state.schedules) state.schedules = [];
+      state.schedules = state.schedules.filter(s => s.id !== schedId);
+      persistState();
+      return sendJson(res, { success: true, message: 'Schedule deleted successfully.' });
     }
 
     if (pathname === '/api/ai/voice/ask' && method === 'POST') {
@@ -513,13 +580,27 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    if (pathname === '/api/camera/status' && method === 'GET') {
-      return sendJson(res, {
+    if (pathname === '/api/camera/heartbeat' && method === 'POST') {
+      const data = await parseJsonBody(req);
+      state.cameraStatus = {
         online: true,
-        fps: 28.5,
-        resolution: "1280x720",
+        fps: data.fps || 25,
+        resolution: data.resolution || '1280x720',
         stream_active: true,
-        stream_url: "/api/camera/stream"
+        stream_url: data.stream_url || `http://${data.ip || '192.168.1.150'}:81/stream`,
+        last_heartbeat: new Date().toISOString()
+      };
+      return sendJson(res, { status: 'success' });
+    }
+
+    if (pathname === '/api/camera/status' && method === 'GET') {
+      const isOnline = state.cameraStatus && (Date.now() - new Date(state.cameraStatus.last_heartbeat).getTime() < 15000);
+      return sendJson(res, {
+        online: isOnline || false,
+        fps: isOnline ? (state.cameraStatus.fps || 25) : 0,
+        resolution: isOnline ? (state.cameraStatus.resolution || "1280x720") : "Offline",
+        stream_active: isOnline || false,
+        stream_url: isOnline ? state.cameraStatus.stream_url : null
       });
     }
 

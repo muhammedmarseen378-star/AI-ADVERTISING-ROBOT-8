@@ -4,13 +4,14 @@
 // ============================================================================
 
 import {
-  apiCheckSession, apiLogout, apiGetProducts, apiGetCategories, apiCreateProduct,
-  apiUpdateProduct, apiDeleteProduct, apiAiProductResearch, apiGetAdvertisements,
-  apiCreateAdvertisement, apiUpdateAdvertisement, apiDeleteAdvertisement, apiPlayNow,
-  apiPauseAd, apiResumeAd, apiGetAdHistory, apiGetGrokConfig, apiSaveGrokConfig,
-  apiTestGrokConnection, apiGetGrokModels, apiSelectGrokModel, apiGetRobotStatus,
-  apiSendCommand, apiEmergencyStop, apiResetEmergencyStop, apiGetCameraStatus,
-  apiGetSystemStats, apiGetSystemLogs, getAdminToken
+  apiCheckSession, apiLogout, apiGetProducts, apiGetCategories, apiCreateCategory,
+  apiUpdateCategory, apiDeleteCategory, apiCreateProduct, apiUpdateProduct, apiDeleteProduct,
+  apiAiProductResearch, apiGetAdvertisements, apiCreateAdvertisement, apiUpdateAdvertisement,
+  apiDeleteAdvertisement, apiPlayNow, apiPauseAd, apiResumeAd, apiGetSchedules,
+  apiCreateSchedule, apiUpdateSchedule, apiDeleteSchedule, apiToggleSchedule,
+  apiGetGrokConfig, apiSaveGrokConfig, apiTestGrokConnection, apiGetGrokModels,
+  apiSelectGrokModel, apiGetRobotStatus, apiSendCommand, apiEmergencyStop,
+  apiResetEmergencyStop, apiGetCameraStatus, apiGetSystemStats, apiGetSystemLogs, getAdminToken
 } from './api.js';
 
 // Application State
@@ -18,6 +19,7 @@ let activeSection = 'overview';
 let productsList = [];
 let categoriesList = [];
 let adsList = [];
+let schedulesList = [];
 let telemetryInterval = null;
 let cameraInterval = null;
 let isCameraSimulatedOnline = false;
@@ -150,6 +152,7 @@ function switchSection(sectionId) {
   else if (sectionId === 'categories') loadCategoriesView();
   else if (sectionId === 'products') loadProducts();
   else if (sectionId === 'advertisements') loadAdvertisements();
+  else if (sectionId === 'schedule') loadSchedulesView();
   else if (sectionId === 'grok-config') loadGrokSettings();
   else if (sectionId === 'camera-monitoring') loadCameraMonitoring();
   else if (sectionId === 'manual-control') pollTelemetry();
@@ -236,6 +239,14 @@ function setupActionListeners() {
     });
   }
 
+  // Quick Add Category from Product Modal
+  const btnQuickCat = document.getElementById('btn-quick-cat-modal');
+  if (btnQuickCat) {
+    btnQuickCat.addEventListener('click', () => {
+      openModal('modal-category');
+    });
+  }
+
   // Add Category Form Submit
   const formCat = document.getElementById('form-category');
   if (formCat) {
@@ -246,22 +257,57 @@ function setupActionListeners() {
       const icon = document.getElementById('cat-icon').value.trim() || '🏷️';
       
       const newCat = {
-        id: 'cat_' + Date.now().toString(36),
         name,
         slug,
         icon,
         display_order: categoriesList.length + 1
       };
 
-      categoriesList.push(newCat);
-      showToast(`Category "${name}" created successfully!`, 'success');
-      closeModal('modal-category');
-      formCat.reset();
-      await loadCategories();
-      renderCategoriesGrid();
+      try {
+        await apiCreateCategory(newCat);
+        showToast(`Category "${name}" created successfully!`, 'success');
+        closeModal('modal-category');
+        formCat.reset();
+        await loadCategories();
+        renderCategoriesGrid();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  }
+
+  // New Schedule Button Trigger
+  const btnNewSched = document.getElementById('btn-new-schedule');
+  if (btnNewSched) {
+    btnNewSched.addEventListener('click', () => {
+      openCreateScheduleModal();
+    });
+  }
+
+  // Schedule Form Submit
+  const formSched = document.getElementById('form-schedule');
+  if (formSched) {
+    formSched.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await handleScheduleSubmit();
     });
   }
 }
+
+window.deleteCategory = async (id) => {
+  const cat = categoriesList.find(c => c.id === id);
+  const name = cat ? cat.name : 'this category';
+  if (confirm(`Are you sure you want to delete category "${name}"?`)) {
+    try {
+      await apiDeleteCategory(id);
+      showToast(`Category "${name}" deleted.`, 'success');
+      await loadCategories();
+      renderCategoriesGrid();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+};
 
 async function sendMove(direction) {
   const speedSlider = document.getElementById('robot-speed-slider');
@@ -271,6 +317,16 @@ async function sendMove(direction) {
   } catch (err) {
     console.warn('Move command error:', err.message);
   }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 // ----------------------------------------------------------------------------
@@ -289,6 +345,32 @@ async function loadOverview() {
       const q = document.getElementById('stat-questions');
       if (q) q.textContent = stats.customerQuestionsTotal || 0;
     }
+
+    if (adsList.length === 0) {
+      try {
+        const adsRes = await apiGetAdvertisements();
+        adsList = adsRes.advertisements || [];
+      } catch (e) {}
+    }
+
+    if (schedulesList.length === 0) {
+      try {
+        const sRes = await apiGetSchedules();
+        schedulesList = sRes.schedules || [];
+      } catch (e) {}
+    }
+
+    const activeAd = adsList.find(a => a.status === 'active') || adsList[0];
+    const activeTitleEl = document.getElementById('overview-active-title');
+    const activeCatEl = document.getElementById('overview-active-cat');
+    const activePageEl = document.getElementById('overview-active-page');
+    const schedCountEl = document.getElementById('overview-schedule-count');
+
+    if (activeTitleEl) activeTitleEl.textContent = activeAd ? activeAd.title : '-- No active broadcast --';
+    if (activeCatEl) activeCatEl.textContent = activeAd ? `Category: ${activeAd.category_name || 'General'}` : 'Category: --';
+    if (activePageEl) activePageEl.textContent = activeAd ? `Page ${activeAd.display_page_id || 1}` : 'Page 1';
+    if (schedCountEl) schedCountEl.textContent = `${schedulesList.length} Rules Active`;
+
     await pollTelemetry();
   } catch (err) {
     console.error('Error loading overview:', err);
@@ -314,31 +396,6 @@ async function pollTelemetry() {
     if (estopBanner) {
       estopBanner.style.display = isEstop ? 'flex' : 'none';
     }
-
-    // Live Telemetry Readouts
-    const telem = data.telemetry || {};
-    const distEl = document.getElementById('telem-distance');
-    if (distEl) distEl.textContent = (telem.front_distance_cm !== undefined && telem.front_distance_cm > 0) ? `${Number(telem.front_distance_cm).toFixed(1)} cm` : 'Clear (>200cm)';
-
-    const motorEl = document.getElementById('telem-motor');
-    if (motorEl) motorEl.textContent = telem.motor_state || 'STOPPED';
-
-    const personEl = document.getElementById('telem-person');
-    if (personEl) {
-      personEl.textContent = telem.person_detected ? `Detected (ID: ${telem.tracking_id || 1})` : 'None';
-      personEl.style.color = telem.person_detected ? 'var(--cyan-primary)' : 'var(--text-muted)';
-    }
-
-    const modeEl = document.getElementById('telem-mode');
-    if (modeEl) modeEl.textContent = telem.operating_mode || 'MANUAL';
-
-    const wifiEl = document.getElementById('telem-wifi');
-    if (wifiEl) wifiEl.textContent = telem.wifi_rssi ? `${telem.wifi_rssi} dBm` : 'Connected';
-
-    const batEl = document.getElementById('telem-battery');
-    if (batEl) {
-      batEl.textContent = telem.battery_volts ? `${telem.battery_volts.toFixed(1)} V` : 'External 12V LiFePO4';
-    }
   } catch (err) {
     console.warn('Telemetry poll error:', err.message);
   }
@@ -353,12 +410,23 @@ async function loadCategories() {
     categoriesList = res.categories || [];
     const select = document.getElementById('filter-category');
     const modalSelect = document.getElementById('prod-category');
+    const adCat = document.getElementById('ad-category');
+
     if (select) {
-      select.innerHTML = '<option value="">All Categories</option>' + 
-        categoriesList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      select.innerHTML = `<option value="">All Categories (${categoriesList.length})</option>` + 
+        categoriesList.map(c => `<option value="${c.id}">${c.icon || '🏷️'} ${escapeHtml(c.name)}</option>`).join('');
     }
     if (modalSelect) {
-      modalSelect.innerHTML = categoriesList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      if (categoriesList.length === 0) {
+        modalSelect.innerHTML = '<option value="" disabled selected>⚠️ No categories yet — Click "+ New Category" above</option>';
+      } else {
+        modalSelect.innerHTML = '<option value="">-- Select Category --</option>' + 
+          categoriesList.map(c => `<option value="${c.id}">${c.icon || '🏷️'} ${escapeHtml(c.name)}</option>`).join('');
+      }
+    }
+    if (adCat) {
+      adCat.innerHTML = '<option value="">-- Auto-filled from Product --</option>' + 
+        categoriesList.map(c => `<option value="${c.id}">${c.icon || '🏷️'} ${escapeHtml(c.name)}</option>`).join('');
     }
   } catch (err) {
     console.error('Error fetching categories:', err);
@@ -385,6 +453,20 @@ function renderCategoriesGrid(filter = '') {
     c.name.toLowerCase().includes(f) || (c.slug && c.slug.toLowerCase().includes(f))
   );
 
+  if (filtered.length === 0) {
+    grid.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 48px 24px; background: rgba(255,255,255,0.02); border: 1px dashed var(--border-color); border-radius: var(--radius-md);">
+        <span style="font-size: 40px; display: block; margin-bottom: 12px;">🏷️</span>
+        <h4 style="color: #fff; margin-bottom: 8px;">No Categories Created Yet</h4>
+        <p style="color: var(--text-muted); font-size: 13px; max-width: 440px; margin: 0 auto 18px auto;">
+          Only user-created categories are used in product and advertisement rotations. Click below to add your first category.
+        </p>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-category')">+ Add Category</button>
+      </div>
+    `;
+    return;
+  }
+
   grid.innerHTML = filtered.map(cat => {
     const icon = cat.icon || getCategoryIcon(cat.slug);
     const count = productsList.filter(p => p.category_id === cat.id).length;
@@ -393,13 +475,14 @@ function renderCategoriesGrid(filter = '') {
         <div>
           <div class="category-card-header">
             <div class="category-icon-bubble">${icon}</div>
-            <div>
-              <div class="category-name">${cat.name}</div>
-              <div class="category-slug">${cat.slug || cat.id}</div>
+            <div style="flex:1;">
+              <div class="category-name">${escapeHtml(cat.name)}</div>
+              <div class="category-slug">${escapeHtml(cat.slug || cat.id)}</div>
             </div>
+            <button class="btn btn-danger btn-sm" style="padding: 2px 8px; font-size: 11px;" onclick="window.deleteCategory('${cat.id}')" title="Delete Category">🗑️</button>
           </div>
           <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
-            Targeted channel for autonomous robot advertising & kiosk rotation.
+            Targeted channel for autonomous robot advertising &amp; display rotation.
           </p>
         </div>
         <div class="category-card-footer">
@@ -477,7 +560,8 @@ function renderProductsTable() {
       <td><span style="font-size:12px; color:var(--text-muted);">${(p.description || '').slice(0, 60)}${(p.description || '').length > 60 ? '...' : ''}</span></td>
       <td><span class="status-pill" style="border-color: rgba(0, 230, 118, 0.4); color: #00e676;">${p.availability || 'In Stock'}</span></td>
       <td>
-        <div style="display: flex; gap: 6px;">
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <button class="btn btn-primary btn-sm" onclick="createAdFromProduct('${p.id}')" title="Create Advertisement from this Product" style="padding: 4px 8px; font-size: 11px;">📢 Make Ad</button>
           <button class="btn btn-secondary btn-sm" onclick="editProduct('${p.id}')">✏️ Edit</button>
           <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}', '${(p.name || 'product').replace(/'/g, "\\'")}')">🗑️ Delete</button>
         </div>
@@ -485,6 +569,52 @@ function renderProductsTable() {
     </tr>
   `).join('');
 }
+
+window.createAdFromProduct = (id) => {
+  const prod = productsList.find(p => p.id === id);
+  if (!prod) return;
+
+  const form = document.getElementById('form-advertisement');
+  if (form) form.reset();
+  document.getElementById('ad-id').value = '';
+
+  // Populate categories dropdown
+  const catSelect = document.getElementById('ad-category');
+  if (catSelect) {
+    catSelect.innerHTML = categoriesList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    if (prod.category_id) catSelect.value = prod.category_id;
+  }
+
+  // Populate products dropdown
+  const prodSelect = document.getElementById('ad-product');
+  if (prodSelect) {
+    prodSelect.innerHTML = '<option value="">-- Standalone / Select Product --</option>' +
+      productsList.map(p => `<option value="${p.id}">${p.name} (₹${p.price || 0})</option>`).join('');
+    prodSelect.value = prod.id;
+  }
+
+  // Auto-fill Advertisement = Product
+  document.getElementById('ad-title').value = prod.name || '';
+  document.getElementById('ad-poster-url').value = prod.image_url || '';
+  document.getElementById('ad-short-desc').value = prod.description || prod.name || '';
+  document.getElementById('ad-short-desc-ml').value = prod.description_ml || '';
+  document.getElementById('ad-price').value = prod.price || '';
+
+  // Update poster preview
+  const previewImg = document.getElementById('ad-poster-img');
+  const placeholder = document.getElementById('ad-poster-placeholder');
+  if (prod.image_url && previewImg) {
+    previewImg.src = prod.image_url;
+    previewImg.style.display = 'block';
+    if (placeholder) placeholder.style.display = 'none';
+  } else if (previewImg) {
+    previewImg.style.display = 'none';
+    if (placeholder) placeholder.style.display = 'block';
+  }
+
+  document.getElementById('modal-ad-title').textContent = `Create Advertisement for "${prod.name}"`;
+  openModal('modal-advertisement');
+};
 
 window.editProduct = (id) => {
   const prod = productsList.find(p => p.id === id);
@@ -524,6 +654,17 @@ window.deleteProduct = async (id, name) => {
       showToast(`Deleted "${name || 'product'}"`, 'success');
       productsList = productsList.filter(p => p.id !== id);
       renderProductsTable();
+
+      // Also remove any linked advertisement
+      const linkedAd = adsList.find(a => a.product_id === id);
+      if (linkedAd) {
+        try {
+          await apiDeleteAdvertisement(linkedAd.id);
+          adsList = adsList.filter(a => a.id !== linkedAd.id);
+          renderAdsTable();
+        } catch (adErr) {}
+      }
+
       const statEl = document.getElementById('stat-total-products');
       if (statEl) statEl.textContent = productsList.length;
     } catch (err) {
@@ -625,6 +766,27 @@ if (formProduct) {
         const idx = productsList.findIndex(p => p.id === id);
         if (idx !== -1) {
           productsList[idx] = { ...productsList[idx], ...payload };
+        }
+
+        // Also update any linked advertisement (Advertisement = Product)
+        const linkedAd = adsList.find(a => a.product_id === id);
+        if (linkedAd) {
+          try {
+            await apiUpdateAdvertisement(linkedAd.id, {
+              ...linkedAd,
+              title: payload.name,
+              category_id: payload.category_id,
+              category_name: payload.category_name,
+              poster_url: payload.image_url || linkedAd.poster_url,
+              short_desc: payload.description || payload.name,
+              short_desc_ml: payload.description_ml || '',
+              price: payload.price
+            });
+            linkedAd.title = payload.name;
+            linkedAd.poster_url = payload.image_url || linkedAd.poster_url;
+            linkedAd.price = payload.price;
+            renderAdsTable();
+          } catch(adErr) {}
         }
       } else {
         const res = await apiCreateProduct(payload);
@@ -819,18 +981,23 @@ window.editAd = (id) => {
   const ad = adsList.find(a => a.id === id);
   if (!ad) return;
 
-  // Populate products dropdown
+  // Populate products dropdown (Only user-created products!)
   const prodSelect = document.getElementById('ad-product');
   if (prodSelect) {
-    prodSelect.innerHTML = '<option value="">-- None / Standalone Ad --</option>' +
-      productsList.map(p => `<option value="${p.id}">${p.name} (₹${p.price || 0})</option>`).join('');
+    if (productsList.length === 0) {
+      prodSelect.innerHTML = '<option value="" disabled selected>⚠️ No products created yet — Create a product first in Products section</option>';
+    } else {
+      prodSelect.innerHTML = '<option value="">-- Select Product (Auto-Fills All Fields) --</option>' +
+        productsList.map(p => `<option value="${p.id}">📦 ${escapeHtml(p.name)} (${p.brand || 'No brand'}) - ₹${p.price || 0}</option>`).join('');
+    }
     prodSelect.value = ad.product_id || '';
   }
 
   // Populate categories dropdown
   const catSelect = document.getElementById('ad-category');
   if (catSelect) {
-    catSelect.innerHTML = categoriesList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    catSelect.innerHTML = '<option value="">-- Category --</option>' + 
+      categoriesList.map(c => `<option value="${c.id}">${c.icon || '🏷️'} ${escapeHtml(c.name)}</option>`).join('');
     catSelect.value = ad.category_id || '';
   }
 
@@ -863,16 +1030,21 @@ window.editAd = (id) => {
 const btnNewAd = document.getElementById('btn-new-advertisement');
 if (btnNewAd) {
   btnNewAd.addEventListener('click', () => {
-    // Populate products dropdown
+    // Populate products dropdown (Only user-created products!)
     const prodSelect = document.getElementById('ad-product');
     if (prodSelect) {
-      prodSelect.innerHTML = '<option value="">-- None / Standalone Ad --</option>' +
-        productsList.map(p => `<option value="${p.id}">${p.name} (₹${p.price || 0})</option>`).join('');
+      if (productsList.length === 0) {
+        prodSelect.innerHTML = '<option value="" disabled selected>⚠️ No products created yet — Create a product first in Products section</option>';
+      } else {
+        prodSelect.innerHTML = '<option value="">-- Select Product (Auto-Fills All Fields) --</option>' +
+          productsList.map(p => `<option value="${p.id}">📦 ${escapeHtml(p.name)} (${p.brand || 'No brand'}) - ₹${p.price || 0}</option>`).join('');
+      }
     }
     // Populate categories dropdown
     const catSelect = document.getElementById('ad-category');
     if (catSelect) {
-      catSelect.innerHTML = categoriesList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      catSelect.innerHTML = '<option value="">-- Category --</option>' + 
+        categoriesList.map(c => `<option value="${c.id}">${c.icon || '🏷️'} ${escapeHtml(c.name)}</option>`).join('');
     }
 
     const form = document.getElementById('form-advertisement');
@@ -884,6 +1056,49 @@ if (btnNewAd) {
     if (placeholder) placeholder.style.display = 'block';
     document.getElementById('modal-ad-title').textContent = 'Create Advertisement Poster';
     openModal('modal-advertisement');
+  });
+}
+
+// Auto-Fill Advertisement = Product on Selection Change
+const adProductSelect = document.getElementById('ad-product');
+if (adProductSelect) {
+  adProductSelect.addEventListener('change', (e) => {
+    const prodId = e.target.value;
+    if (!prodId) return;
+    const prod = productsList.find(p => p.id === prodId);
+    if (!prod) return;
+
+    // Fill Advertisement fields from Product
+    const titleInput = document.getElementById('ad-title');
+    if (titleInput) titleInput.value = prod.name || '';
+
+    const catSelect = document.getElementById('ad-category');
+    if (catSelect && prod.category_id) catSelect.value = prod.category_id;
+
+    const posterInput = document.getElementById('ad-poster-url');
+    if (posterInput) posterInput.value = prod.image_url || '';
+
+    const previewImg = document.getElementById('ad-poster-img');
+    const placeholder = document.getElementById('ad-poster-placeholder');
+    if (prod.image_url && previewImg) {
+      previewImg.src = prod.image_url;
+      previewImg.style.display = 'block';
+      if (placeholder) placeholder.style.display = 'none';
+    } else if (previewImg) {
+      previewImg.style.display = 'none';
+      if (placeholder) placeholder.style.display = 'block';
+    }
+
+    const priceInput = document.getElementById('ad-price');
+    if (priceInput) priceInput.value = prod.price || '';
+
+    const shortDesc = document.getElementById('ad-short-desc');
+    if (shortDesc) shortDesc.value = prod.description || '';
+
+    const shortDescMl = document.getElementById('ad-short-desc-ml');
+    if (shortDescMl) shortDescMl.value = prod.description_ml || '';
+
+    showToast(`Auto-filled advertisement from "${prod.name}"`, 'success');
   });
 }
 
@@ -974,6 +1189,197 @@ if (formAd) {
       showToast(err.message, 'error');
     }
   });
+}
+
+// ----------------------------------------------------------------------------
+// 4. SCHEDULE MANAGEMENT SECTION
+// ----------------------------------------------------------------------------
+async function loadSchedulesView() {
+  try {
+    const res = await apiGetSchedules();
+    schedulesList = res.schedules || [];
+    if (adsList.length === 0) {
+      try {
+        const aRes = await apiGetAdvertisements();
+        adsList = aRes.advertisements || [];
+      } catch (e) {}
+    }
+    renderSchedulesTable();
+  } catch (err) {
+    showToast('Failed to load schedules: ' + err.message, 'error');
+  }
+}
+
+function renderSchedulesTable() {
+  const tbody = document.getElementById('schedules-table-body');
+  if (!tbody) return;
+
+  if (schedulesList.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="8" style="text-align: center; padding: 48px 20px; color: var(--text-muted);">
+          <div style="font-size: 32px; margin-bottom: 12px;">⏱️</div>
+          <div style="font-size: 15px; font-weight: 700; color: #e2e8f0; margin-bottom: 6px;">No Advertisement Schedules Configured</div>
+          <p style="font-size: 13px; color: #94a3b8; max-width: 440px; margin: 0 auto 16px;">
+            Set up automated rotation schedules with specific playback windows, rotation durations, and DWIN display screens.
+          </p>
+          <button class="btn btn-primary btn-sm" onclick="window.openCreateScheduleModal()">+ Create Schedule Rule</button>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = schedulesList.map(s => {
+    const linkedAd = adsList.find(a => a.id === s.advertisement_id);
+    const title = s.ad_title || (linkedAd ? linkedAd.title : 'Advertisement');
+    const poster = linkedAd?.poster_url || '';
+    const isActive = s.is_active === 1 || s.is_active === true;
+
+    return `
+      <tr>
+        <td>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            ${poster 
+              ? `<img src="${poster}" style="width:38px; height:38px; border-radius:6px; object-fit:cover; border:1px solid var(--border-color);" onerror="this.style.display='none'">` 
+              : `<div style="width:38px; height:38px; border-radius:6px; background:rgba(0,240,255,0.1); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; font-size:16px;">📢</div>`
+            }
+            <div>
+              <strong style="color: #fff; font-size: 14px;">${escapeHtml(title)}</strong>
+              ${linkedAd?.price ? `<br><small style="color: var(--cyan-primary);">₹${linkedAd.price}</small>` : ''}
+            </div>
+          </div>
+        </td>
+        <td><span class="status-pill">Page ${s.display_page_id || 1}</span></td>
+        <td><strong style="color:#fff;">${s.start_time || '09:00'}</strong></td>
+        <td><strong style="color:#fff;">${s.end_time || '21:00'}</strong></td>
+        <td>${s.duration_sec || 30}s loop</td>
+        <td><span style="font-size:12px; color:var(--text-dim);">${s.days || 'Every Day'}</span></td>
+        <td>
+          <button class="btn btn-sm ${isActive ? 'btn-secondary' : 'btn-secondary'}" style="${isActive ? 'border-color: rgba(0,240,255,0.4); color: var(--cyan-primary);' : 'opacity: 0.6;'}" onclick="window.toggleSchedule('${s.id}')">
+            ${isActive ? '🟢 Active' : '⚪ Paused'}
+          </button>
+        </td>
+        <td>
+          <div style="display: flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="window.editSchedule('${s.id}')" title="Edit Schedule">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="window.deleteSchedule('${s.id}')" title="Delete Schedule">🗑️</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+window.openCreateScheduleModal = () => {
+  const adSelect = document.getElementById('sched-ad-id');
+  if (adSelect) {
+    if (adsList.length === 0) {
+      adSelect.innerHTML = '<option value="" disabled selected>⚠️ No advertisements found — Create an ad or product first</option>';
+    } else {
+      adSelect.innerHTML = '<option value="">-- Choose Advertisement --</option>' +
+        adsList.map(a => `<option value="${a.id}">📢 ${escapeHtml(a.title)} (Page ${a.display_page_id || 1})</option>`).join('');
+    }
+  }
+
+  const form = document.getElementById('form-schedule');
+  if (form) form.reset();
+  document.getElementById('sched-id').value = '';
+  document.getElementById('modal-schedule-title').textContent = 'Create Schedule Rule';
+  openModal('modal-schedule');
+};
+
+window.editSchedule = (id) => {
+  const s = schedulesList.find(item => item.id === id);
+  if (!s) return;
+
+  const adSelect = document.getElementById('sched-ad-id');
+  if (adSelect) {
+    adSelect.innerHTML = '<option value="">-- Choose Advertisement --</option>' +
+      adsList.map(a => `<option value="${a.id}">📢 ${escapeHtml(a.title)} (Page ${a.display_page_id || 1})</option>`).join('');
+    adSelect.value = s.advertisement_id;
+  }
+
+  document.getElementById('sched-id').value = s.id;
+  document.getElementById('sched-start-time').value = s.start_time || '09:00';
+  document.getElementById('sched-end-time').value = s.end_time || '21:00';
+  document.getElementById('sched-page-id').value = s.display_page_id || '1';
+  document.getElementById('sched-duration').value = s.duration_sec || 30;
+  document.getElementById('sched-days').value = s.days || 'Every Day';
+  document.getElementById('sched-priority').value = s.priority || '2';
+  document.getElementById('sched-active').checked = s.is_active === 1 || s.is_active === true;
+
+  document.getElementById('modal-schedule-title').textContent = 'Edit Schedule Rule';
+  openModal('modal-schedule');
+};
+
+window.deleteSchedule = async (id) => {
+  if (confirm('Are you sure you want to delete this schedule rule?')) {
+    try {
+      await apiDeleteSchedule(id);
+      showToast('Schedule rule deleted successfully!', 'success');
+      schedulesList = schedulesList.filter(s => s.id !== id);
+      renderSchedulesTable();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+};
+
+window.toggleSchedule = async (id) => {
+  try {
+    const res = await apiToggleSchedule(id);
+    const updated = res.schedule;
+    const found = schedulesList.find(s => s.id === id);
+    if (found && updated) {
+      found.is_active = updated.is_active;
+    }
+    renderSchedulesTable();
+    showToast('Schedule status updated!', 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+};
+
+async function handleScheduleSubmit() {
+  const id = document.getElementById('sched-id').value;
+  const adSelect = document.getElementById('sched-ad-id');
+  const adId = adSelect.value;
+  const selectedAd = adsList.find(a => a.id === adId);
+  const adTitle = selectedAd ? selectedAd.title : 'Scheduled Ad';
+
+  const payload = {
+    advertisement_id: adId,
+    ad_title: adTitle,
+    display_page_id: parseInt(document.getElementById('sched-page-id').value || 1),
+    start_time: document.getElementById('sched-start-time').value,
+    end_time: document.getElementById('sched-end-time').value,
+    duration_sec: parseInt(document.getElementById('sched-duration').value || 30),
+    days: document.getElementById('sched-days').value,
+    priority: parseInt(document.getElementById('sched-priority').value || 2),
+    is_active: document.getElementById('sched-active').checked ? 1 : 0
+  };
+
+  try {
+    if (id) {
+      await apiUpdateSchedule(id, payload);
+      showToast('Schedule rule updated successfully!', 'success');
+      const idx = schedulesList.findIndex(s => s.id === id);
+      if (idx !== -1) {
+        schedulesList[idx] = { ...schedulesList[idx], ...payload };
+      }
+    } else {
+      const res = await apiCreateSchedule(payload);
+      showToast('Schedule rule created successfully!', 'success');
+      const created = res.schedule || { ...payload, id: 'sched_' + Date.now() };
+      schedulesList.unshift(created);
+    }
+
+    closeModal('modal-schedule');
+    renderSchedulesTable();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
 }
 
 // ----------------------------------------------------------------------------
