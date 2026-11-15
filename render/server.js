@@ -262,9 +262,14 @@ const server = http.createServer(async (req, res) => {
       const newProd = {
         id: body.id || ('prod_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6)),
         ...body,
-        created_at: new Date().toISOString()
+        created_at: body.created_at || new Date().toISOString()
       };
-      state.products.push(newProd);
+      const existingIdx = state.products.findIndex(p => p.id === newProd.id);
+      if (existingIdx !== -1) {
+        state.products[existingIdx] = { ...state.products[existingIdx], ...newProd, updated_at: new Date().toISOString() };
+      } else {
+        state.products.push(newProd);
+      }
       persistState();
       return sendJson(res, { success: true, product: newProd }, 201);
     }
@@ -298,9 +303,14 @@ const server = http.createServer(async (req, res) => {
       const newAd = {
         id: body.id || ('ad_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6)),
         ...body,
-        created_at: new Date().toISOString()
+        created_at: body.created_at || new Date().toISOString()
       };
-      state.advertisements.push(newAd);
+      const existingIdx = state.advertisements.findIndex(a => a.id === newAd.id);
+      if (existingIdx !== -1) {
+        state.advertisements[existingIdx] = { ...state.advertisements[existingIdx], ...newAd, updated_at: new Date().toISOString() };
+      } else {
+        state.advertisements.push(newAd);
+      }
       persistState();
       return sendJson(res, { success: true, advertisement: newAd }, 201);
     }
@@ -545,14 +555,19 @@ const server = http.createServer(async (req, res) => {
         display_page_id: parseInt(body.display_page_id || 1),
         start_time: body.start_time || '09:00',
         end_time: body.end_time || '21:00',
-        duration_sec: parseInt(body.duration_sec || 30),
+        duration_sec: parseInt(body.duration_sec || 0),
         days: body.days || 'Every Day',
         priority: parseInt(body.priority || 2),
         is_active: body.is_active !== undefined ? (body.is_active ? 1 : 0) : 1,
-        created_at: new Date().toISOString()
+        created_at: body.created_at || new Date().toISOString()
       };
       if (!state.schedules) state.schedules = [];
-      state.schedules.push(newSchedule);
+      const existingIdx = state.schedules.findIndex(s => s.id === newSchedule.id);
+      if (existingIdx !== -1) {
+        state.schedules[existingIdx] = { ...state.schedules[existingIdx], ...newSchedule, updated_at: new Date().toISOString() };
+      } else {
+        state.schedules.push(newSchedule);
+      }
       persistState();
       return sendJson(res, { success: true, schedule: newSchedule }, 201);
     }

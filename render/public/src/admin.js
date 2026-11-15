@@ -11,7 +11,8 @@ import {
   apiCreateSchedule, apiUpdateSchedule, apiDeleteSchedule, apiToggleSchedule,
   apiGetGrokConfig, apiSaveGrokConfig, apiTestGrokConnection, apiGetGrokModels,
   apiSelectGrokModel, apiGetRobotStatus, apiSendCommand, apiEmergencyStop,
-  apiResetEmergencyStop, apiGetCameraStatus, apiGetSystemStats, apiGetSystemLogs, getAdminToken
+  apiResetEmergencyStop, apiGetCameraStatus, apiGetSystemStats, apiGetSystemLogs, getAdminToken,
+  syncLocalDataToCloud, isDummyItem
 } from './api.js';
 
 // Application State
@@ -75,27 +76,30 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 2. Actively purge any legacy dummy products or ads from previous browser storage
+  // 2. Actively purge only legacy template dummy items from previous browser storage
   try {
     localStorage.removeItem('cached_active_ad');
     const storedProds = localStorage.getItem('custom_products');
     if (storedProds) {
       const parsed = JSON.parse(storedProds);
-      const cleaned = parsed.filter(p => !p.id.startsWith('prod_0') && !p.name.includes('Titan') && !p.name.includes('AeroPulse'));
+      const cleaned = Array.isArray(parsed) ? parsed.filter(p => !isDummyItem(p)) : [];
       localStorage.setItem('custom_products', JSON.stringify(cleaned));
     }
   } catch (e) {}
 
-  // 3. Setup navigation listeners & actions
+  // 3. Immediately trigger multi-device bi-directional sync (Laptop <-> Mobile <-> Cloud)
+  setTimeout(syncLocalDataToCloud, 100);
+
+  // 4. Setup navigation listeners & actions
   setupNavigation();
   setupActionListeners();
   setupCameraControls();
 
-  // 3. Load initial dashboard data
+  // 5. Load initial dashboard data
   await loadCategories();
   await loadOverview();
 
-  // 4. Start polling for real robot telemetry (every 3 seconds)
+  // 6. Start polling for real robot telemetry (every 3 seconds)
   telemetryInterval = setInterval(pollTelemetry, 3000);
 });
 
@@ -490,6 +494,15 @@ async function loadOverview() {
       if (q) q.textContent = stats.customerQuestionsTotal || 0;
     }
 
+    if (productsList.length === 0) {
+      try {
+        const prodRes = await apiGetProducts();
+        productsList = prodRes.products || [];
+        const p = document.getElementById('stat-total-products');
+        if (p && productsList.length > 0) p.textContent = productsList.length;
+      } catch (e) {}
+    }
+
     if (adsList.length === 0) {
       try {
         const adsRes = await apiGetAdvertisements();
@@ -709,7 +722,7 @@ function renderProductsTable() {
 
   if (productsList.length === 0) {
     tbody.innerHTML = `
-      <tr>
+      <tr class="empty-row">
         <td colspan="6" style="text-align: center; padding: 48px 20px; color: var(--text-muted);">
           <div style="font-size: 32px; margin-bottom: 12px;">📦</div>
           <div style="font-size: 15px; font-weight: 700; color: #e2e8f0; margin-bottom: 6px;">No Products Added Yet</div>
@@ -1067,7 +1080,7 @@ function renderAdsTable() {
 
   if (adsList.length === 0) {
     tbody.innerHTML = `
-      <tr>
+      <tr class="empty-row">
         <td colspan="6" style="text-align: center; padding: 48px 20px; color: var(--text-muted);">
           <div style="font-size: 32px; margin-bottom: 12px;">📢</div>
           <div style="font-size: 15px; font-weight: 700; color: #e2e8f0; margin-bottom: 6px;">No Advertisements Created Yet</div>
@@ -1399,8 +1412,8 @@ function renderSchedulesTable() {
 
   if (schedulesList.length === 0) {
     tbody.innerHTML = `
-      <tr>
-        <td colspan="8" style="text-align: center; padding: 48px 20px; color: var(--text-muted);">
+      <tr class="empty-row">
+        <td colspan="7" style="text-align: center; padding: 48px 20px; color: var(--text-muted);">
           <div style="font-size: 32px; margin-bottom: 12px;">⏱️</div>
           <div style="font-size: 15px; font-weight: 700; color: #e2e8f0; margin-bottom: 6px;">No Advertisement Schedules Configured</div>
           <p style="font-size: 13px; color: #94a3b8; max-width: 440px; margin: 0 auto 16px;">
@@ -1788,7 +1801,20 @@ async function loadLogs() {
   try {
     const res = await apiGetSystemLogs();
     const tbody = document.getElementById('logs-table-body');
-    if (!tbody || !res.logs) return;
+    if (!tbody) return;
+
+    if (!res.logs || res.logs.length === 0) {
+      tbody.innerHTML = `
+        <tr class="empty-row">
+          <td colspan="4" style="text-align: center; padding: 40px 16px; color: var(--text-muted);">
+            <div style="font-size: 28px; margin-bottom: 8px;">📋</div>
+            <div style="font-size: 14px; font-weight: 700; color: #e2e8f0; margin-bottom: 4px;">No System Logs Yet</div>
+            <p style="font-size: 12px; color: #94a3b8; margin: 0;">Robot operations, AI research, and broadcast events will appear here in real time.</p>
+          </td>
+        </tr>
+      `;
+      return;
+    }
 
     tbody.innerHTML = res.logs.map(l => `
       <tr>

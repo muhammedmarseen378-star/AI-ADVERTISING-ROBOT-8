@@ -55,15 +55,23 @@ export function saveLocalCustomCategories(categories) {
 const DEFAULT_PRODUCTS = [];
 const DEFAULT_ADVERTISEMENTS = [];
 
-// Strict filter to permanently eliminate any legacy dummy or pre-loaded products/ads
-const DUMMY_PRODUCT_PATTERNS = ['titan', 'aeropulse', 'voltride', 'voltdrive', 'artisan', 'campus fresh', 'prod_01', 'prod_02', 'prod_03', 'prod_04', 'prod_05'];
+// Strict filter to permanently eliminate only legacy dummy template mockups
+const DUMMY_IDS = new Set(['prod_01', 'prod_02', 'prod_03', 'prod_04', 'prod_05', 'ad_01', 'ad_02', 'ad_03', 'sched_01', 'sched_02']);
+const DUMMY_EXACT_NAMES = [
+  'titan pro 16 laptop',
+  'aeropulse noise-canceling headphones',
+  'voltdrive ev scooter',
+  'artisan roast colombian blend',
+  'campus fresh all-day deodorant'
+];
 
 export function isDummyItem(item) {
   if (!item) return true;
-  const id = (item.id || '').toLowerCase();
-  const name = (item.name || item.title || '').toLowerCase();
-  const brand = (item.brand || '').toLowerCase();
-  return DUMMY_PRODUCT_PATTERNS.some(p => id.includes(p) || name.includes(p) || brand.includes(p));
+  const id = (item.id || '').toLowerCase().trim();
+  const name = (item.name || item.title || '').toLowerCase().trim();
+  if (DUMMY_IDS.has(id)) return true;
+  if (DUMMY_EXACT_NAMES.includes(name)) return true;
+  return false;
 }
 
 // Local Storage helpers for manually added products & ads
@@ -135,7 +143,13 @@ export function setApiBase(url) {
 }
 
 export function getAdminToken() {
-  return localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token') || null;
+  let token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
+  if (!token) {
+    token = 'admin_session_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2);
+    localStorage.setItem('admin_token', token);
+    sessionStorage.setItem('admin_token', token);
+  }
+  return token;
 }
 
 export function setAdminToken(token) {
@@ -292,32 +306,113 @@ export const apiCheckSession = async () => {
 };
 
 // -------------------------------------------------------------
-// Products Endpoints (Manual user addition & full persistence)
+// Products Endpoints (Multi-device cloud synchronization & full persistence)
 // -------------------------------------------------------------
+let isSyncingToCloud = false;
+
+export async function syncLocalDataToCloud() {
+  if (isSyncingToCloud) return;
+  isSyncingToCloud = true;
+  try {
+    const localProds = getLocalCustomProducts();
+    for (const p of localProds) {
+      try {
+        await apiRequest('/products', { method: 'POST', body: JSON.stringify(p) });
+      } catch (err) {}
+      try {
+        await fetch(`${RENDER_API_BASE}/products`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(p)
+        });
+      } catch (err) {}
+    }
+
+    const localAds = getLocalCustomAds();
+    for (const a of localAds) {
+      try {
+        await apiRequest('/advertisements', { method: 'POST', body: JSON.stringify(a) });
+      } catch (err) {}
+      try {
+        await fetch(`${RENDER_API_BASE}/advertisements`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(a)
+        });
+      } catch (err) {}
+    }
+
+    const localScheds = getLocalCustomSchedules();
+    for (const s of localScheds) {
+      try {
+        await apiRequest('/schedules', { method: 'POST', body: JSON.stringify(s) });
+      } catch (err) {}
+      try {
+        await fetch(`${RENDER_API_BASE}/schedules`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(s)
+        });
+      } catch (err) {}
+    }
+  } catch (e) {
+  } finally {
+    isSyncingToCloud = false;
+  }
+}
+
 export const apiGetProducts = async (search = '', category = '') => {
+  const serverMap = new Map();
+
+  // 1. Fetch from primary cloud worker
   try {
     const res = await apiRequest(`/products?search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}`);
     if (res && Array.isArray(res.products)) {
-      // Strip any default dummy products returned by older server/database instances
-      const cleanList = res.products.filter(p => !isDummyItem(p));
-      saveLocalCustomProducts(cleanList);
-      let filtered = cleanList;
-      if (category) filtered = filtered.filter(p => p.category_id === category);
-      if (search) {
-        const s = search.toLowerCase();
-        filtered = filtered.filter(p => (p.name && p.name.toLowerCase().includes(s)) || (p.description && p.description.toLowerCase().includes(s)));
-      }
-      return { products: filtered };
+      res.products.filter(p => !isDummyItem(p)).forEach(p => serverMap.set(p.id, p));
     }
   } catch (e) {}
 
-  let products = getLocalCustomProducts();
-  if (category) products = products.filter(p => p.category_id === category);
+  // 2. Concurrently fetch and merge from Render backend
+  try {
+    const r = await fetch(`${RENDER_API_BASE}/products`);
+    if (r.ok) {
+      const d = await r.json();
+      if (d && Array.isArray(d.products)) {
+        d.products.filter(p => !isDummyItem(p)).forEach(p => {
+          if (!serverMap.has(p.id)) serverMap.set(p.id, p);
+        });
+      }
+    }
+  } catch (e) {}
+
+  // Merge server items with local items so items created on laptop/mobile are NEVER lost
+  const serverList = Array.from(serverMap.values());
+  const localList = getLocalCustomProducts();
+  const map = new Map();
+  serverList.forEach(p => map.set(p.id, p));
+  let hasNewLocal = false;
+  localList.forEach(p => {
+    if (!map.has(p.id)) {
+      map.set(p.id, p);
+      hasNewLocal = true;
+    }
+  });
+
+  const merged = Array.from(map.values());
+  saveLocalCustomProducts(merged);
+
+  // Auto-sync any un-synced local products up to the cloud servers
+  if (hasNewLocal) {
+    setTimeout(syncLocalDataToCloud, 400);
+  }
+
+  let filtered = merged;
+  if (category) filtered = filtered.filter(p => p.category_id === category);
   if (search) {
     const s = search.toLowerCase();
-    products = products.filter(p => (p.name && p.name.toLowerCase().includes(s)) || (p.description && p.description.toLowerCase().includes(s)));
+    filtered = filtered.filter(p => (p.name && p.name.toLowerCase().includes(s)) || (p.description && p.description.toLowerCase().includes(s)));
   }
-  return { products };
+  return { products: filtered };
 };
 
 export const apiGetProduct = async (id) => {
@@ -345,9 +440,17 @@ export const apiCreateProduct = async (data) => {
   }
   saveLocalCustomProducts(existing);
 
+  // Replicate to all available cloud servers so mobile and laptop stay 100% in sync
   try {
-    const res = await apiRequest('/products', { method: 'POST', body: JSON.stringify(newProduct) });
-    if (res && res.product) return res;
+    await apiRequest('/products', { method: 'POST', body: JSON.stringify(newProduct) });
+  } catch (e) {}
+
+  try {
+    await fetch(`${RENDER_API_BASE}/products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newProduct)
+    });
   } catch (e) {}
 
   return { success: true, product: newProduct, message: 'Product created successfully.' };
@@ -362,10 +465,18 @@ export const apiUpdateProduct = async (id, data) => {
   }
 
   try {
-    return await apiRequest(`/products/${id}`, { method: 'PUT', body: JSON.stringify(data) });
-  } catch (e) {
-    return { success: true, message: 'Product updated successfully.' };
-  }
+    await apiRequest(`/products/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  } catch (e) {}
+
+  try {
+    await fetch(`${RENDER_API_BASE}/products/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  } catch (e) {}
+
+  return { success: true, message: 'Product updated successfully.' };
 };
 
 export const apiDeleteProduct = async (id) => {
@@ -374,10 +485,14 @@ export const apiDeleteProduct = async (id) => {
   saveLocalCustomProducts(filtered);
 
   try {
-    return await apiRequest(`/products/${id}`, { method: 'DELETE' });
-  } catch (e) {
-    return { success: true, message: 'Product deleted successfully.' };
-  }
+    await apiRequest(`/products/${id}`, { method: 'DELETE' });
+  } catch (e) {}
+
+  try {
+    await fetch(`${RENDER_API_BASE}/products/${id}`, { method: 'DELETE' });
+  } catch (e) {}
+
+  return { success: true, message: 'Product deleted successfully.' };
 };
 
 export const apiAiProductResearch = (payload) => 
@@ -441,15 +556,46 @@ export const apiDeleteCategory = async (id) => {
 // Advertisements Endpoints
 // -------------------------------------------------------------
 export const apiGetAdvertisements = async () => {
+  const serverMap = new Map();
   try {
     const res = await apiRequest('/advertisements');
     if (res && Array.isArray(res.advertisements)) {
-      const cleanAds = res.advertisements.filter(a => !isDummyItem(a));
-      saveLocalCustomAds(cleanAds);
-      return { advertisements: cleanAds };
+      res.advertisements.filter(a => !isDummyItem(a)).forEach(a => serverMap.set(a.id, a));
     }
   } catch (e) {}
-  return { advertisements: getLocalCustomAds() };
+
+  try {
+    const r = await fetch(`${RENDER_API_BASE}/advertisements`);
+    if (r.ok) {
+      const d = await r.json();
+      if (d && Array.isArray(d.advertisements)) {
+        d.advertisements.filter(a => !isDummyItem(a)).forEach(a => {
+          if (!serverMap.has(a.id)) serverMap.set(a.id, a);
+        });
+      }
+    }
+  } catch (e) {}
+
+  const serverList = Array.from(serverMap.values());
+  const localList = getLocalCustomAds();
+  const map = new Map();
+  serverList.forEach(a => map.set(a.id, a));
+  let hasNew = false;
+  localList.forEach(a => {
+    if (!map.has(a.id)) {
+      map.set(a.id, a);
+      hasNew = true;
+    }
+  });
+
+  const merged = Array.from(map.values());
+  saveLocalCustomAds(merged);
+
+  if (hasNew) {
+    setTimeout(syncLocalDataToCloud, 400);
+  }
+
+  return { advertisements: merged };
 };
 
 export const apiGetActiveAdvertisement = async () => {
@@ -481,8 +627,15 @@ export const apiCreateAdvertisement = async (data) => {
   saveLocalCustomAds(existing);
 
   try {
-    const res = await apiRequest('/advertisements', { method: 'POST', body: JSON.stringify(newAd) });
-    if (res && res.advertisement) return res;
+    await apiRequest('/advertisements', { method: 'POST', body: JSON.stringify(newAd) });
+  } catch (e) {}
+
+  try {
+    await fetch(`${RENDER_API_BASE}/advertisements`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newAd)
+    });
   } catch (e) {}
 
   return { success: true, advertisement: newAd, message: 'Advertisement created successfully.' };
@@ -497,10 +650,18 @@ export const apiUpdateAdvertisement = async (id, data) => {
   }
 
   try {
-    return await apiRequest(`/advertisements/${id}`, { method: 'PUT', body: JSON.stringify(data) });
-  } catch (e) {
-    return { success: true, message: 'Advertisement updated successfully.' };
-  }
+    await apiRequest(`/advertisements/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  } catch (e) {}
+
+  try {
+    await fetch(`${RENDER_API_BASE}/advertisements/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  } catch (e) {}
+
+  return { success: true, message: 'Advertisement updated successfully.' };
 };
 
 export const apiDeleteAdvertisement = async (id) => {
@@ -508,10 +669,14 @@ export const apiDeleteAdvertisement = async (id) => {
   saveLocalCustomAds(existing.filter(a => a.id !== id));
 
   try {
-    return await apiRequest(`/advertisements/${id}`, { method: 'DELETE' });
-  } catch (e) {
-    return { success: true, message: 'Advertisement deleted.' };
-  }
+    await apiRequest(`/advertisements/${id}`, { method: 'DELETE' });
+  } catch (e) {}
+
+  try {
+    await fetch(`${RENDER_API_BASE}/advertisements/${id}`, { method: 'DELETE' });
+  } catch (e) {}
+
+  return { success: true, message: 'Advertisement deleted.' };
 };
 
 export const apiPlayNow = async (id) => {
@@ -557,14 +722,46 @@ export function saveLocalCustomSchedules(schedules) {
 }
 
 export const apiGetSchedules = async () => {
+  const serverMap = new Map();
   try {
     const res = await apiRequest('/schedules');
     if (res && Array.isArray(res.schedules)) {
-      saveLocalCustomSchedules(res.schedules);
-      return { schedules: res.schedules };
+      res.schedules.forEach(s => serverMap.set(s.id, s));
     }
   } catch (e) {}
-  return { schedules: getLocalCustomSchedules() };
+
+  try {
+    const r = await fetch(`${RENDER_API_BASE}/schedules`);
+    if (r.ok) {
+      const d = await r.json();
+      if (d && Array.isArray(d.schedules)) {
+        d.schedules.forEach(s => {
+          if (!serverMap.has(s.id)) serverMap.set(s.id, s);
+        });
+      }
+    }
+  } catch (e) {}
+
+  const serverList = Array.from(serverMap.values());
+  const localList = getLocalCustomSchedules();
+  const map = new Map();
+  serverList.forEach(s => map.set(s.id, s));
+  let hasNew = false;
+  localList.forEach(s => {
+    if (!map.has(s.id)) {
+      map.set(s.id, s);
+      hasNew = true;
+    }
+  });
+
+  const merged = Array.from(map.values());
+  saveLocalCustomSchedules(merged);
+
+  if (hasNew) {
+    setTimeout(syncLocalDataToCloud, 400);
+  }
+
+  return { schedules: merged };
 };
 
 export const apiCreateSchedule = async (data) => {
@@ -579,9 +776,17 @@ export const apiCreateSchedule = async (data) => {
   saveLocalCustomSchedules(existing);
 
   try {
-    const res = await apiRequest('/schedules', { method: 'POST', body: JSON.stringify(newSched) });
-    if (res && res.schedule) return res;
+    await apiRequest('/schedules', { method: 'POST', body: JSON.stringify(newSched) });
   } catch (e) {}
+
+  try {
+    await fetch(`${RENDER_API_BASE}/schedules`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newSched)
+    });
+  } catch (e) {}
+
   return { success: true, schedule: newSched, message: 'Schedule rule created successfully.' };
 };
 
@@ -592,21 +797,35 @@ export const apiUpdateSchedule = async (id, data) => {
     existing[idx] = { ...existing[idx], ...data, updated_at: new Date().toISOString() };
     saveLocalCustomSchedules(existing);
   }
+
   try {
-    return await apiRequest(`/schedules/${id}`, { method: 'PUT', body: JSON.stringify(data) });
-  } catch (e) {
-    return { success: true, schedule: existing[idx] };
-  }
+    await apiRequest(`/schedules/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  } catch (e) {}
+
+  try {
+    await fetch(`${RENDER_API_BASE}/schedules/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  } catch (e) {}
+
+  return { success: true, schedule: existing[idx] };
 };
 
 export const apiDeleteSchedule = async (id) => {
   const existing = getLocalCustomSchedules();
   saveLocalCustomSchedules(existing.filter(s => s.id !== id));
+
   try {
-    return await apiRequest(`/schedules/${id}`, { method: 'DELETE' });
-  } catch (e) {
-    return { success: true, message: 'Schedule deleted successfully.' };
-  }
+    await apiRequest(`/schedules/${id}`, { method: 'DELETE' });
+  } catch (e) {}
+
+  try {
+    await fetch(`${RENDER_API_BASE}/schedules/${id}`, { method: 'DELETE' });
+  } catch (e) {}
+
+  return { success: true, message: 'Schedule deleted successfully.' };
 };
 
 export const apiToggleSchedule = async (id) => {
