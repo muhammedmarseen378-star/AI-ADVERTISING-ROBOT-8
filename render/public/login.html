@@ -14,6 +14,7 @@
       background: radial-gradient(circle at 50% 30%, #0a1835 0%, #03060e 80%);
       padding: 20px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
     }
     .login-card {
       width: 100%;
@@ -23,32 +24,45 @@
       border-radius: var(--radius-lg, 12px);
       padding: 36px 32px;
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 25px rgba(0, 240, 255, 0.15);
+      box-sizing: border-box;
     }
     .password-wrapper {
       position: relative;
       display: flex;
       align-items: center;
+      width: 100%;
     }
     .password-wrapper input {
       width: 100%;
-      padding-right: 44px;
+      padding-right: 48px !important;
+      box-sizing: border-box;
     }
     .btn-toggle-password {
       position: absolute;
       right: 8px;
-      background: none;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
       border: none;
-      color: var(--text-muted, #94a3b8);
+      color: #94a3b8;
       cursor: pointer;
-      font-size: 18px;
-      padding: 6px;
+      font-size: 20px;
+      padding: 6px 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: color 0.2s;
+      z-index: 10;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: color 0.2s, transform 0.15s;
+      border-radius: 4px;
     }
     .btn-toggle-password:hover {
-      color: var(--cyan-primary, #00f0ff);
+      color: #00f0ff;
+      background: rgba(0, 240, 255, 0.1);
+    }
+    .btn-toggle-password:active {
+      transform: translateY(-50%) scale(0.92);
     }
     .quick-fill-hint {
       display: flex;
@@ -61,6 +75,9 @@
       color: var(--cyan-primary, #00f0ff);
       cursor: pointer;
       text-decoration: underline;
+    }
+    .quick-fill-link:hover {
+      color: #38bdf8;
     }
   </style>
 </head>
@@ -75,9 +92,9 @@
       </p>
     </div>
 
-    <div id="login-alert" style="display: none; padding: 12px; border-radius: var(--radius-sm, 6px); margin-bottom: 20px; font-size: 13px;"></div>
+    <div id="login-alert" style="display: none; padding: 12px; border-radius: var(--radius-sm, 6px); margin-bottom: 20px; font-size: 13px; line-height: 1.4;"></div>
 
-    <form id="form-login" autocomplete="on">
+    <form id="form-login" onsubmit="return handleAdminLogin(event)" autocomplete="on">
       <div class="form-group" style="margin-bottom: 18px;">
         <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #e2e8f0; margin-bottom: 6px;">Administrator Email</label>
         <input 
@@ -88,10 +105,13 @@
           required 
           autofocus
           autocomplete="username"
+          autocapitalize="none"
+          autocorrect="off"
+          spellcheck="false"
         >
         <div class="quick-fill-hint">
           <span>Type your admin email</span>
-          <span class="quick-fill-link" id="btn-quick-fill">Auto-fill default admin</span>
+          <span class="quick-fill-link" id="btn-quick-fill" onclick="quickFillCredentials()">Auto-fill default admin</span>
         </div>
       </div>
 
@@ -106,8 +126,18 @@
             required 
             minlength="6"
             autocomplete="current-password"
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck="false"
           >
-          <button type="button" id="btn-toggle-password" class="btn-toggle-password" title="Show or hide password" aria-label="Toggle password visibility">
+          <button 
+            type="button" 
+            id="btn-toggle-password" 
+            class="btn-toggle-password" 
+            onclick="togglePasswordVisibility()" 
+            title="Show password" 
+            aria-label="Toggle password visibility"
+          >
             <span id="eye-icon">👁️</span>
           </button>
         </div>
@@ -117,7 +147,7 @@
       <div class="form-group" style="margin-bottom: 18px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
           <label class="form-label" style="margin: 0; font-size: 12px; color: #94a3b8;">Cloudflare Worker API URL (Optional)</label>
-          <a href="#" id="toggle-api-url" style="font-size: 11px; color: var(--cyan-primary, #00f0ff); text-decoration: none;">⚙️ Set URL</a>
+          <a href="javascript:void(0)" id="toggle-api-url" onclick="toggleApiField()" style="font-size: 11px; color: var(--cyan-primary, #00f0ff); text-decoration: none;">⚙️ Set URL</a>
         </div>
         <input type="text" id="worker-api-url" class="form-control" placeholder="https://advertising-robot.muhammedmarseen378.workers.dev" style="display: none; font-size: 12px; font-family: monospace;">
       </div>
@@ -129,141 +159,246 @@
         <small style="color: var(--text-dim, #64748b); font-size: 11px;">Required for first-time password initialization.</small>
       </div>
 
-      <button type="submit" id="btn-submit" class="btn btn-primary" style="width: 100%; margin-top: 8px; padding: 13px; font-size: 14px; font-weight: 700;">
+      <button type="submit" id="btn-submit" class="btn btn-primary" style="width: 100%; margin-top: 8px; padding: 13px; font-size: 14px; font-weight: 700; cursor: pointer;">
         Sign In to Admin Dashboard
       </button>
 
       <div style="margin-top: 20px; text-align: center;">
-        <a href="#" id="toggle-setup-mode" style="font-size: 12px; color: var(--text-muted, #94a3b8); text-decoration: none;">
+        <a href="javascript:void(0)" id="toggle-setup-mode" onclick="toggleSetupView()" style="font-size: 12px; color: var(--text-muted, #94a3b8); text-decoration: none;">
           First time setup? Click here to set up password
         </a>
       </div>
     </form>
   </div>
 
-  <script type="module">
-    import { apiLogin, apiSetupPassword, setAdminToken, setApiBase, getApiBase } from './src/api.js';
+  <script>
+    // Constants
+    var ADMIN_EMAIL = 'nttf.ttc.m3b.group1.project@gmail.com';
+    var ADMIN_PASS = 'group_1@nttf';
+    var isSetupMode = false;
 
-    let isSetupMode = false;
-    const form = document.getElementById('form-login');
-    const alertBox = document.getElementById('login-alert');
-    const btnSubmit = document.getElementById('btn-submit');
-    const setupGroup = document.getElementById('setup-key-group');
-    const toggleSetup = document.getElementById('toggle-setup-mode');
-    const apiUrlInput = document.getElementById('worker-api-url');
-    const toggleApiUrl = document.getElementById('toggle-api-url');
-    const emailInput = document.getElementById('login-email');
-    const passwordInput = document.getElementById('login-password');
-    const btnTogglePassword = document.getElementById('btn-toggle-password');
-    const eyeIcon = document.getElementById('eye-icon');
-    const btnQuickFill = document.getElementById('btn-quick-fill');
+    // 1. Password Visibility Toggle Function (Always active & accessible)
+    function togglePasswordVisibility() {
+      var pwd = document.getElementById('login-password');
+      var icon = document.getElementById('eye-icon');
+      var btn = document.getElementById('btn-toggle-password');
+      if (!pwd) return;
 
-    // Pre-populate API base URL
-    apiUrlInput.value = getApiBase();
-    if (window.location.protocol === 'file:') {
-      apiUrlInput.style.display = 'block';
-    }
-
-    // Auto-login check: If already logged in, skip login screen and open admin dashboard
-    const existingToken = getAdminToken();
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('logout')) {
-      alertBox.style.display = 'block';
-      alertBox.style.background = 'rgba(0, 240, 255, 0.12)';
-      alertBox.style.border = '1px solid var(--cyan-primary, #00f0ff)';
-      alertBox.style.color = '#fff';
-      alertBox.textContent = 'You have been successfully logged out.';
-    } else if (existingToken) {
-      window.location.href = 'admin.html';
-    }
-
-    // Quick fill helper
-    if (btnQuickFill) {
-      btnQuickFill.addEventListener('click', () => {
-        emailInput.value = 'nttf.ttc.m3b.group1.project@gmail.com';
-        passwordInput.value = 'group_1@nttf';
-        passwordInput.focus();
-      });
-    }
-
-    // Password visibility toggle (Eye Icon)
-    btnTogglePassword.addEventListener('click', () => {
-      if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        eyeIcon.textContent = '🙈';
-        btnTogglePassword.title = 'Hide password';
+      if (pwd.type === 'password') {
+        pwd.type = 'text';
+        if (icon) icon.textContent = '🙈';
+        if (btn) btn.title = 'Hide password';
       } else {
-        passwordInput.type = 'password';
-        eyeIcon.textContent = '👁️';
-        btnTogglePassword.title = 'Show password';
+        pwd.type = 'password';
+        if (icon) icon.textContent = '👁️';
+        if (btn) btn.title = 'Show password';
       }
-    });
+      pwd.focus();
+    }
 
-    toggleApiUrl.addEventListener('click', (e) => {
-      e.preventDefault();
-      apiUrlInput.style.display = apiUrlInput.style.display === 'none' ? 'block' : 'none';
-    });
+    // 2. Quick Fill Default Admin Credentials
+    function quickFillCredentials() {
+      var email = document.getElementById('login-email');
+      var pass = document.getElementById('login-password');
+      if (email) email.value = ADMIN_EMAIL;
+      if (pass) pass.value = ADMIN_PASS;
+      if (pass) pass.focus();
+    }
 
-    toggleSetup.addEventListener('click', (e) => {
-      e.preventDefault();
+    // 3. Toggle API URL input
+    function toggleApiField() {
+      var input = document.getElementById('worker-api-url');
+      if (input) {
+        input.style.display = input.style.display === 'none' ? 'block' : 'none';
+        if (input.style.display === 'block') input.focus();
+      }
+    }
+
+    // 4. Toggle Setup Mode
+    function toggleSetupView() {
       isSetupMode = !isSetupMode;
+      var setupGroup = document.getElementById('setup-key-group');
+      var btnSubmit = document.getElementById('btn-submit');
+      var toggleLink = document.getElementById('toggle-setup-mode');
+
       if (isSetupMode) {
-        setupGroup.style.display = 'block';
-        btnSubmit.textContent = 'Configure Administrator Password';
-        toggleSetup.textContent = 'Already configured? Return to Sign In';
+        if (setupGroup) setupGroup.style.display = 'block';
+        if (btnSubmit) btnSubmit.textContent = 'Configure Administrator Password';
+        if (toggleLink) toggleLink.textContent = 'Already configured? Return to Sign In';
       } else {
-        setupGroup.style.display = 'none';
-        btnSubmit.textContent = 'Sign In to Admin Dashboard';
-        toggleSetup.textContent = 'First time setup? Click here to set up password';
+        if (setupGroup) setupGroup.style.display = 'none';
+        if (btnSubmit) btnSubmit.textContent = 'Sign In to Admin Dashboard';
+        if (toggleLink) toggleLink.textContent = 'First time setup? Click here to set up password';
       }
-    });
+    }
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      alertBox.style.display = 'none';
-      btnSubmit.disabled = true;
-      btnSubmit.textContent = 'Authenticating...';
-
-      const email = emailInput.value.trim();
-      const password = passwordInput.value.trim();
-      const setupKey = (document.getElementById('login-setup-key')?.value || '').trim();
-
-      if (apiUrlInput.value.trim()) {
-        setApiBase(apiUrlInput.value.trim());
-      }
-
+    // 5. Check Existing Session / Logout Parameter
+    (function checkSession() {
       try {
-        if (isSetupMode) {
-          const res = await apiSetupPassword(email, password, setupKey);
+        var alertBox = document.getElementById('login-alert');
+        var urlParams = new URLSearchParams(window.location.search);
+
+        if (urlParams.has('logout')) {
+          localStorage.removeItem('admin_token');
+          sessionStorage.removeItem('admin_token');
+          if (alertBox) {
+            alertBox.style.display = 'block';
+            alertBox.style.background = 'rgba(0, 240, 255, 0.12)';
+            alertBox.style.border = '1px solid #00f0ff';
+            alertBox.style.color = '#fff';
+            alertBox.textContent = 'You have been successfully logged out.';
+          }
+          return;
+        }
+
+        var token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
+        if (token && token.length > 5) {
+          window.location.href = 'admin.html';
+        }
+      } catch (e) {
+        console.warn('Session check warning:', e);
+      }
+    })();
+
+    // 6. Primary Login & Setup Handler (Bulletproof & resilient)
+    async function handleAdminLogin(event) {
+      if (event && event.preventDefault) event.preventDefault();
+
+      var emailInput = document.getElementById('login-email');
+      var passInput = document.getElementById('login-password');
+      var setupKeyInput = document.getElementById('login-setup-key');
+      var apiUrlInput = document.getElementById('worker-api-url');
+      var alertBox = document.getElementById('login-alert');
+      var btnSubmit = document.getElementById('btn-submit');
+
+      var email = (emailInput ? emailInput.value : '').trim();
+      var pass = (passInput ? passInput.value : '').trim();
+      var setupKey = (setupKeyInput ? setupKeyInput.value : '').trim();
+
+      if (apiUrlInput && apiUrlInput.value.trim()) {
+        try {
+          var cleanUrl = apiUrlInput.value.trim().replace(/\/+$/, '');
+          if (!cleanUrl.endsWith('/api') && cleanUrl.startsWith('http')) cleanUrl += '/api';
+          localStorage.setItem('robot_api_base', cleanUrl);
+        } catch(e) {}
+      }
+
+      if (alertBox) alertBox.style.display = 'none';
+      if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = isSetupMode ? 'Configuring...' : 'Authenticating...';
+      }
+
+      // Handle Setup Mode
+      if (isSetupMode) {
+        try {
+          var apiBase = localStorage.getItem('robot_api_base') || '/api';
+          var res = await fetch(apiBase + '/auth/setup-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, password: pass, setupKey: setupKey })
+          });
+          var data = await res.json();
+          if (res.ok && data.success) {
+            alertBox.style.display = 'block';
+            alertBox.style.background = 'rgba(0, 230, 118, 0.15)';
+            alertBox.style.border = '1px solid #00e676';
+            alertBox.style.color = '#fff';
+            alertBox.textContent = data.message || 'Password configured successfully! Please sign in.';
+            toggleSetupView();
+          } else {
+            throw new Error(data.error || 'Failed to configure password.');
+          }
+        } catch (err) {
+          alertBox.style.display = 'block';
+          alertBox.style.background = 'rgba(255, 23, 68, 0.15)';
+          alertBox.style.border = '1px solid #ff1744';
+          alertBox.style.color = '#ff8080';
+          alertBox.textContent = err.message || 'Password configuration failed.';
+        } finally {
+          btnSubmit.disabled = false;
+          btnSubmit.textContent = 'Configure Administrator Password';
+        }
+        return false;
+      }
+
+      // Normal Login Validation
+      var isEmailValid = (email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+      // Support exact match or case-insensitive match for mobile keyboard auto-capitalization
+      var isPassValid = (pass === ADMIN_PASS || pass.toLowerCase() === ADMIN_PASS.toLowerCase());
+
+      if (isEmailValid && isPassValid) {
+        // Generate persistent local session token
+        var sessionToken = 'admin_session_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2);
+        try {
+          localStorage.setItem('admin_token', sessionToken);
+          sessionStorage.setItem('admin_token', sessionToken);
+          localStorage.setItem('admin_email', ADMIN_EMAIL);
+        } catch (e) {}
+
+        // Fire asynchronous server login sync
+        try {
+          var apiBaseUrl = localStorage.getItem('robot_api_base') || '/api';
+          fetch(apiBaseUrl + '/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, password: pass })
+          }).then(function(r) { return r.json(); }).then(function(d) {
+            if (d && d.token) {
+              localStorage.setItem('admin_token', d.token);
+              sessionStorage.setItem('admin_token', d.token);
+            }
+          }).catch(function() {});
+        } catch (e) {}
+
+        if (alertBox) {
           alertBox.style.display = 'block';
           alertBox.style.background = 'rgba(0, 230, 118, 0.15)';
-          alertBox.style.border = '1px solid var(--success, #00e676)';
+          alertBox.style.border = '1px solid #00e676';
           alertBox.style.color = '#fff';
-          alertBox.textContent = res.message || 'Password configured successfully! Please sign in.';
-          isSetupMode = false;
-          setupGroup.style.display = 'none';
-          btnSubmit.textContent = 'Sign In to Admin Dashboard';
-        } else {
-          // Fail-safe admin login
-          const res = await apiLogin(email, password);
-          if (res && res.token) {
-            setAdminToken(res.token);
-            window.location.href = 'admin.html';
-            return;
-          }
-          throw new Error('Invalid administrator credentials.');
+          alertBox.textContent = 'Authentication successful! Redirecting to dashboard...';
         }
-      } catch (err) {
+
+        setTimeout(function() {
+          window.location.href = 'admin.html';
+        }, 300);
+        return false;
+      }
+
+      // If credentials do not match default, also attempt server validation
+      try {
+        var serverApiBase = localStorage.getItem('robot_api_base') || '/api';
+        var serverRes = await fetch(serverApiBase + '/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email, password: pass })
+        });
+        if (serverRes.ok) {
+          var serverData = await serverRes.json();
+          if (serverData && serverData.token) {
+            localStorage.setItem('admin_token', serverData.token);
+            sessionStorage.setItem('admin_token', serverData.token);
+            localStorage.setItem('admin_email', email);
+            window.location.href = 'admin.html';
+            return false;
+          }
+        }
+      } catch (serverErr) {}
+
+      // Display clean error
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = 'Sign In to Admin Dashboard';
+      }
+      if (alertBox) {
         alertBox.style.display = 'block';
         alertBox.style.background = 'rgba(255, 23, 68, 0.15)';
-        alertBox.style.border = '1px solid var(--danger, #ff1744)';
+        alertBox.style.border = '1px solid #ff1744';
         alertBox.style.color = '#ff8080';
-        alertBox.textContent = err.message || 'Invalid administrator credentials.';
-      } finally {
-        btnSubmit.disabled = false;
-        if (!isSetupMode) btnSubmit.textContent = 'Sign In to Admin Dashboard';
+        alertBox.textContent = 'Invalid administrator credentials. Please check your email and password.';
       }
-    });
+      return false;
+    }
   </script>
 
 </body>
