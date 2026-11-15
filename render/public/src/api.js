@@ -33,11 +33,28 @@ const DEFAULT_CATEGORIES = [
 const DEFAULT_PRODUCTS = [];
 const DEFAULT_ADVERTISEMENTS = [];
 
+// Strict filter to permanently eliminate any legacy dummy or pre-loaded products/ads
+const DUMMY_PRODUCT_PATTERNS = ['titan', 'aeropulse', 'voltride', 'voltdrive', 'artisan', 'campus fresh', 'prod_01', 'prod_02', 'prod_03', 'prod_04', 'prod_05'];
+
+export function isDummyItem(item) {
+  if (!item) return true;
+  const id = (item.id || '').toLowerCase();
+  const name = (item.name || item.title || '').toLowerCase();
+  const brand = (item.brand || '').toLowerCase();
+  return DUMMY_PRODUCT_PATTERNS.some(p => id.includes(p) || name.includes(p) || brand.includes(p));
+}
+
 // Local Storage helpers for manually added products & ads
 export function getLocalCustomProducts() {
   try {
     const raw = localStorage.getItem('custom_products');
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    const cleaned = Array.isArray(parsed) ? parsed.filter(p => !isDummyItem(p)) : [];
+    if (cleaned.length !== parsed.length) {
+      localStorage.setItem('custom_products', JSON.stringify(cleaned));
+    }
+    return cleaned;
   } catch (e) {
     return [];
   }
@@ -45,14 +62,21 @@ export function getLocalCustomProducts() {
 
 export function saveLocalCustomProducts(products) {
   try {
-    localStorage.setItem('custom_products', JSON.stringify(products));
+    const cleaned = (products || []).filter(p => !isDummyItem(p));
+    localStorage.setItem('custom_products', JSON.stringify(cleaned));
   } catch (e) {}
 }
 
 export function getLocalCustomAds() {
   try {
     const raw = localStorage.getItem('custom_advertisements');
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    const cleaned = Array.isArray(parsed) ? parsed.filter(a => !isDummyItem(a)) : [];
+    if (cleaned.length !== parsed.length) {
+      localStorage.setItem('custom_advertisements', JSON.stringify(cleaned));
+    }
+    return cleaned;
   } catch (e) {
     return [];
   }
@@ -60,7 +84,8 @@ export function getLocalCustomAds() {
 
 export function saveLocalCustomAds(ads) {
   try {
-    localStorage.setItem('custom_advertisements', JSON.stringify(ads));
+    const cleaned = (ads || []).filter(a => !isDummyItem(a));
+    localStorage.setItem('custom_advertisements', JSON.stringify(cleaned));
   } catch (e) {}
 }
 
@@ -239,10 +264,16 @@ export const apiGetProducts = async (search = '', category = '') => {
   try {
     const res = await apiRequest(`/products?search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}`);
     if (res && Array.isArray(res.products)) {
-      if (res.products.length > 0) {
-        saveLocalCustomProducts(res.products);
+      // Strip any default dummy products returned by older server/database instances
+      const cleanList = res.products.filter(p => !isDummyItem(p));
+      saveLocalCustomProducts(cleanList);
+      let filtered = cleanList;
+      if (category) filtered = filtered.filter(p => p.category_id === category);
+      if (search) {
+        const s = search.toLowerCase();
+        filtered = filtered.filter(p => (p.name && p.name.toLowerCase().includes(s)) || (p.description && p.description.toLowerCase().includes(s)));
       }
-      return res;
+      return { products: filtered };
     }
   } catch (e) {}
 
@@ -333,10 +364,9 @@ export const apiGetAdvertisements = async () => {
   try {
     const res = await apiRequest('/advertisements');
     if (res && Array.isArray(res.advertisements)) {
-      if (res.advertisements.length > 0) {
-        saveLocalCustomAds(res.advertisements);
-      }
-      return res;
+      const cleanAds = res.advertisements.filter(a => !isDummyItem(a));
+      saveLocalCustomAds(cleanAds);
+      return { advertisements: cleanAds };
     }
   } catch (e) {}
   return { advertisements: getLocalCustomAds() };

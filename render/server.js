@@ -18,7 +18,8 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'group_1@nttf';
 // In-Memory & File-backed Store
 let state = {
   activeSessions: new Set(),
-  activeAdId: 'ad_demo_01',
+  activeAdId: null,
+  activeAdPageId: 1,
   operatingMode: 'MANUAL',
   emergencyStop: false,
   grokApiKey: '',
@@ -166,7 +167,8 @@ const server = http.createServer(async (req, res) => {
     return serveStatic(req, res, path.join(PUBLIC_DIR, 'admin.html'));
   }
   if (pathname === '/kiosk' || pathname === '/kiosk.html') {
-    return serveStatic(req, res, path.join(PUBLIC_DIR, 'kiosk.html'));
+    res.writeHead(302, { 'Location': '/admin.html' });
+    return res.end();
   }
 
   // Static Assets from /public
@@ -246,7 +248,7 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/products' && method === 'POST') {
       const body = await parseJsonBody(req);
       const newProd = {
-        id: 'prod_' + Date.now().toString(36),
+        id: body.id || ('prod_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6)),
         ...body,
         created_at: new Date().toISOString()
       };
@@ -255,20 +257,40 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, { success: true, product: newProd }, 201);
     }
 
+    if (pathname.startsWith('/api/products/') && method === 'PUT') {
+      const prodId = pathname.replace('/api/products/', '');
+      const body = await parseJsonBody(req);
+      const idx = state.products.findIndex(p => p.id === prodId);
+      if (idx !== -1) {
+        state.products[idx] = { ...state.products[idx], ...body, updated_at: new Date().toISOString() };
+        persistState();
+        return sendJson(res, { success: true, product: state.products[idx], message: 'Product updated successfully.' });
+      }
+      return sendJson(res, { error: 'Product not found' }, 404);
+    }
+
+    if (pathname.startsWith('/api/products/') && method === 'DELETE') {
+      const prodId = pathname.replace('/api/products/', '');
+      state.products = state.products.filter(p => p.id !== prodId);
+      persistState();
+      return sendJson(res, { success: true, message: 'Product deleted successfully.' });
+    }
+
     // Advertisements
     if (pathname === '/api/advertisements' && method === 'GET') {
       return sendJson(res, { advertisements: state.advertisements });
     }
 
-    if (pathname === '/api/advertisements/active' && method === 'GET') {
-      let active = state.advertisements.find(a => a.id === state.activeAdId && a.status === 'active');
-      if (!active) {
-        active = state.advertisements.find(a => a.status === 'active') || state.advertisements[0];
-      }
-      return sendJson(res, {
-        ...active,
-        robot_online: (Date.now() - new Date(state.robotTelemetry.last_heartbeat).getTime()) < 30000
-      });
+    if (pathname === '/api/advertisements' && method === 'POST') {
+      const body = await parseJsonBody(req);
+      const newAd = {
+        id: body.id || ('ad_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6)),
+        ...body,
+        created_at: new Date().toISOString()
+      };
+      state.advertisements.push(newAd);
+      persistState();
+      return sendJson(res, { success: true, advertisement: newAd }, 201);
     }
 
     if (pathname.startsWith('/api/advertisements/') && pathname.endsWith('/play-now') && method === 'POST') {
@@ -278,13 +300,55 @@ const server = http.createServer(async (req, res) => {
         state.advertisements.forEach(a => { if (a.status === 'active') a.status = 'scheduled'; });
         found.status = 'active';
         state.activeAdId = found.id;
+        state.activeAdPageId = found.display_page_id || 1;
         persistState();
         return sendJson(res, { success: true, message: `Ad "${found.title}" is now playing.` });
       }
       return sendJson(res, { error: 'Ad not found' }, 404);
     }
 
-    // Robot Heartbeat & Telemetry
+    if (pathname.startsWith('/api/advertisements/') && pathname.endsWith('/pause') && method === 'POST') {
+      const adId = pathname.split('/')[3];
+      const found = state.advertisements.find(a => a.id === adId);
+      if (found) {
+        found.status = 'paused';
+        persistState();
+        return sendJson(res, { success: true, message: `Ad "${found.title}" paused.` });
+      }
+      return sendJson(res, { error: 'Ad not found' }, 404);
+    }
+
+    if (pathname.startsWith('/api/advertisements/') && pathname.endsWith('/resume') && method === 'POST') {
+      const adId = pathname.split('/')[3];
+      const found = state.advertisements.find(a => a.id === adId);
+      if (found) {
+        found.status = 'active';
+        persistState();
+        return sendJson(res, { success: true, message: `Ad "${found.title}" resumed.` });
+      }
+      return sendJson(res, { error: 'Ad not found' }, 404);
+    }
+
+    if (pathname.startsWith('/api/advertisements/') && method === 'PUT') {
+      const adId = pathname.replace('/api/advertisements/', '');
+      const body = await parseJsonBody(req);
+      const idx = state.advertisements.findIndex(a => a.id === adId);
+      if (idx !== -1) {
+        state.advertisements[idx] = { ...state.advertisements[idx], ...body, updated_at: new Date().toISOString() };
+        persistState();
+        return sendJson(res, { success: true, advertisement: state.advertisements[idx], message: 'Ad updated successfully.' });
+      }
+      return sendJson(res, { error: 'Ad not found' }, 404);
+    }
+
+    if (pathname.startsWith('/api/advertisements/') && method === 'DELETE') {
+      const adId = pathname.replace('/api/advertisements/', '');
+      state.advertisements = state.advertisements.filter(a => a.id !== adId);
+      persistState();
+      return sendJson(res, { success: true, message: 'Ad deleted successfully.' });
+    }
+
+    // Robot Heartbeat & Telemetry (ESP32 Integration)
     if (pathname === '/api/robot/heartbeat' && method === 'POST') {
       const telemetry = await parseJsonBody(req);
       state.robotTelemetry = {
@@ -292,19 +356,38 @@ const server = http.createServer(async (req, res) => {
         ...telemetry,
         last_heartbeat: new Date().toISOString()
       };
-      const pendingCmd = state.pendingCommands.shift() || null;
+      
+      // Dispatch any queued commands to ESP32
+      const commandsToDispatch = state.pendingCommands.splice(0, state.pendingCommands.length);
+      
       return sendJson(res, {
-        success: true,
-        activeAdId: state.activeAdId,
+        status: 'OK',
+        timestamp: new Date().toISOString(),
         emergencyStopActive: state.emergencyStop,
-        pendingCommand: pendingCmd
+        activeAdvertisement: {
+          adId: state.activeAdId || null,
+          displayPageId: state.activeAdPageId || 1
+        },
+        commands: commandsToDispatch
       });
+    }
+
+    if (pathname === '/api/robot/command/ack' && method === 'POST') {
+      const ackData = await parseJsonBody(req);
+      return sendJson(res, { success: true, acknowledged: ackData.commandId });
     }
 
     if (pathname === '/api/robot/status' && method === 'GET') {
       const isOnline = (Date.now() - new Date(state.robotTelemetry.last_heartbeat).getTime()) < 30000;
       return sendJson(res, {
         online: isOnline,
+        device: {
+          id: 'ESP32_MAIN_ROBOT_01',
+          name: 'SevenSemi ESP32-S3 Main Controller',
+          status: isOnline ? 'online' : 'offline',
+          lastSeen: state.robotTelemetry.last_heartbeat,
+          firmwareVersion: state.robotTelemetry.firmwareVersion || '1.0.0'
+        },
         operatingMode: state.operatingMode,
         emergencyStop: state.emergencyStop,
         telemetry: state.robotTelemetry,
@@ -312,37 +395,50 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    // Robot Commands
+    // Robot Commands (Manual Control from Website to ESP32)
     if (pathname === '/api/robot/command' && method === 'POST') {
-      const cmd = await parseJsonBody(req);
-      state.pendingCommands.push({
-        id: 'cmd_' + Date.now().toString(36),
-        ...cmd,
+      const body = await parseJsonBody(req);
+      const cmdType = body.commandType || body.command_type;
+      
+      if (state.emergencyStop && cmdType === 'MOVE') {
+        return sendJson(res, { error: 'Emergency Stop is currently active. Reset Emergency Stop before dispatching movement.' }, 403);
+      }
+
+      const payloadJson = typeof body.payload === 'string' ? body.payload : JSON.stringify(body.payload || {});
+      const cmdObj = {
+        id: 'cmd_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6),
+        command_type: cmdType,
+        payload_json: payloadJson,
         created_at: new Date().toISOString()
-      });
-      return sendJson(res, { success: true, message: 'Command queued for robot execution' });
+      };
+      state.pendingCommands.push(cmdObj);
+      return sendJson(res, { success: true, commandId: cmdObj.id, message: 'Command queued for robot execution' });
     }
 
     if (pathname === '/api/robot/emergency-stop' && method === 'POST') {
       state.emergencyStop = true;
       state.operatingMode = 'EMERGENCY_STOP';
-      state.pendingCommands.unshift({
-        id: 'cmd_estop_' + Date.now(),
+      const estopCmd = {
+        id: 'estop_' + Date.now().toString(36),
         command_type: 'EMERGENCY_STOP',
-        payload: { stop_all: true }
-      });
-      return sendJson(res, { success: true, message: 'EMERGENCY STOP ACTIVATED' });
+        payload_json: '{}',
+        created_at: new Date().toISOString()
+      };
+      state.pendingCommands = [estopCmd];
+      return sendJson(res, { success: true, message: 'EMERGENCY STOP ACTIVATED', emergencyStopActive: true });
     }
 
     if (pathname === '/api/robot/emergency-stop/reset' && method === 'POST') {
       state.emergencyStop = false;
       state.operatingMode = 'MANUAL';
-      state.pendingCommands.unshift({
-        id: 'cmd_reset_' + Date.now(),
+      const resetCmd = {
+        id: 'reset_' + Date.now().toString(36),
         command_type: 'RESET_ESTOP',
-        payload: { reset: true }
-      });
-      return sendJson(res, { success: true, message: 'Emergency stop cleared' });
+        payload_json: '{}',
+        created_at: new Date().toISOString()
+      };
+      state.pendingCommands.push(resetCmd);
+      return sendJson(res, { success: true, message: 'Emergency stop cleared', emergencyStopActive: false });
     }
 
     // Groq AI Integration

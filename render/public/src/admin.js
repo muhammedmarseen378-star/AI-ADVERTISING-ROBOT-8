@@ -73,7 +73,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 2. Setup navigation listeners & actions
+  // 2. Actively purge any legacy dummy products or ads from previous browser storage
+  try {
+    localStorage.removeItem('cached_active_ad');
+    const storedProds = localStorage.getItem('custom_products');
+    if (storedProds) {
+      const parsed = JSON.parse(storedProds);
+      const cleaned = parsed.filter(p => !p.id.startsWith('prod_0') && !p.name.includes('Titan') && !p.name.includes('AeroPulse'));
+      localStorage.setItem('custom_products', JSON.stringify(cleaned));
+    }
+  } catch (e) {}
+
+  // 3. Setup navigation listeners & actions
   setupNavigation();
   setupActionListeners();
   setupCameraControls();
@@ -439,6 +450,7 @@ function renderProductsTable() {
           <p style="font-size: 13px; color: #94a3b8; max-width: 440px; margin: 0 auto 16px;">
             Your product catalog is empty. Click <strong>"+ Add Product"</strong> above to manually create your first product.
           </p>
+          <button type="button" class="btn btn-primary" onclick="document.getElementById('btn-new-product').click()">+ Add Product Manually</button>
         </td>
       </tr>
     `;
@@ -447,14 +459,28 @@ function renderProductsTable() {
 
   tbody.innerHTML = productsList.map(p => `
     <tr>
-      <td><strong>${p.name}</strong><br><small style="color:var(--text-dim);">${p.brand || 'Enterprise'}</small></td>
-      <td><span class="status-pill">${p.category_name || 'Electronics'}</span></td>
-      <td style="color:#ffd200; font-weight:700;">${p.price ? '₹' + Number(p.price).toLocaleString('en-IN') : 'N/A'}</td>
-      <td><span style="font-size:12px; color:var(--text-muted);">${(p.description || '').slice(0, 60)}...</span></td>
-      <td><span class="status-pill">${p.availability || 'In Stock'}</span></td>
       <td>
-        <button class="btn btn-secondary btn-sm" onclick="editProduct('${p.id}')">Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}', '${p.name}')">Delete</button>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          ${p.image_url 
+            ? `<img src="${p.image_url}" alt="${p.name}" style="width: 44px; height: 44px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border-color);" onerror="this.outerHTML='<div style=\\'width:44px;height:44px;border-radius:6px;background:rgba(0,240,255,0.1);border:1px solid var(--border-color);display:flex;align-items:center;justify-content:center;font-size:20px;\\'>📦</div>'">` 
+            : `<div style="width: 44px; height: 44px; border-radius: 6px; background: rgba(0, 240, 255, 0.1); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 20px;">📦</div>`
+          }
+          <div>
+            <strong style="color: #fff; font-size: 14px;">${p.name}</strong>
+            <br>
+            <small style="color: var(--cyan-primary);">${p.brand || 'Enterprise'}</small>
+          </div>
+        </div>
+      </td>
+      <td><span class="status-pill">${p.category_name || 'General'}</span></td>
+      <td style="color:#ffd200; font-weight:700;">${p.price ? '₹' + Number(p.price).toLocaleString('en-IN') : 'N/A'}</td>
+      <td><span style="font-size:12px; color:var(--text-muted);">${(p.description || '').slice(0, 60)}${(p.description || '').length > 60 ? '...' : ''}</span></td>
+      <td><span class="status-pill" style="border-color: rgba(0, 230, 118, 0.4); color: #00e676;">${p.availability || 'In Stock'}</span></td>
+      <td>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn btn-secondary btn-sm" onclick="editProduct('${p.id}')">✏️ Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}', '${(p.name || 'product').replace(/'/g, "\\'")}')">🗑️ Delete</button>
+        </div>
       </td>
     </tr>
   `).join('');
@@ -464,25 +490,42 @@ window.editProduct = (id) => {
   const prod = productsList.find(p => p.id === id);
   if (!prod) return;
   document.getElementById('prod-id').value = prod.id;
-  document.getElementById('prod-name').value = prod.name;
+  document.getElementById('prod-name').value = prod.name || '';
   document.getElementById('prod-brand').value = prod.brand || '';
   document.getElementById('prod-model').value = prod.model || '';
   document.getElementById('prod-category').value = prod.category_id || '';
   document.getElementById('prod-price').value = prod.price || '';
+  document.getElementById('prod-image-url').value = prod.image_url || '';
   document.getElementById('prod-desc').value = prod.description || '';
   document.getElementById('prod-desc-ml').value = prod.description_ml || '';
   document.getElementById('prod-promo').value = prod.promo_info || '';
   document.getElementById('prod-features').value = prod.features_json || '';
+
+  // Update poster preview
+  const previewImg = document.getElementById('prod-poster-img');
+  const placeholder = document.getElementById('prod-poster-placeholder');
+  if (prod.image_url && previewImg) {
+    previewImg.src = prod.image_url;
+    previewImg.style.display = 'block';
+    if (placeholder) placeholder.style.display = 'none';
+  } else if (previewImg) {
+    previewImg.style.display = 'none';
+    if (placeholder) placeholder.style.display = 'block';
+  }
+
   document.getElementById('modal-product-title').textContent = 'Edit Product';
   openModal('modal-product');
 };
 
 window.deleteProduct = async (id, name) => {
-  if (confirm(`Are you sure you want to delete product "${name}"?`)) {
+  if (confirm(`Are you sure you want to delete product "${name || 'this item'}"?`)) {
     try {
       await apiDeleteProduct(id);
-      showToast(`Deleted ${name}`, 'success');
-      loadProducts();
+      showToast(`Deleted "${name || 'product'}"`, 'success');
+      productsList = productsList.filter(p => p.id !== id);
+      renderProductsTable();
+      const statEl = document.getElementById('stat-total-products');
+      if (statEl) statEl.textContent = productsList.length;
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -495,8 +538,56 @@ if (btnNewProduct) {
   btnNewProduct.addEventListener('click', () => {
     document.getElementById('form-product').reset();
     document.getElementById('prod-id').value = '';
+    const previewImg = document.getElementById('prod-poster-img');
+    const placeholder = document.getElementById('prod-poster-placeholder');
+    if (previewImg) previewImg.style.display = 'none';
+    if (placeholder) placeholder.style.display = 'block';
+    const fileName = document.getElementById('prod-file-name');
+    if (fileName) fileName.textContent = 'JPG, PNG, WebP supported';
     document.getElementById('modal-product-title').textContent = 'Add New Product';
     openModal('modal-product');
+  });
+}
+
+// Product Poster image file upload
+const prodFileInput = document.getElementById('prod-image-file');
+if (prodFileInput) {
+  prodFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target.result;
+      document.getElementById('prod-image-url').value = dataUrl;
+      const previewImg = document.getElementById('prod-poster-img');
+      const placeholder = document.getElementById('prod-poster-placeholder');
+      const fileName = document.getElementById('prod-file-name');
+      if (previewImg) {
+        previewImg.src = dataUrl;
+        previewImg.style.display = 'block';
+      }
+      if (placeholder) placeholder.style.display = 'none';
+      if (fileName) fileName.textContent = file.name;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Product Poster URL live preview
+const prodUrlInput = document.getElementById('prod-image-url');
+if (prodUrlInput) {
+  prodUrlInput.addEventListener('input', (e) => {
+    const url = e.target.value.trim();
+    const previewImg = document.getElementById('prod-poster-img');
+    const placeholder = document.getElementById('prod-poster-placeholder');
+    if (url && previewImg) {
+      previewImg.src = url;
+      previewImg.style.display = 'block';
+      if (placeholder) placeholder.style.display = 'none';
+    } else if (previewImg) {
+      previewImg.style.display = 'none';
+      if (placeholder) placeholder.style.display = 'block';
+    }
   });
 }
 
@@ -510,28 +601,63 @@ if (formProduct) {
     const catName = catSelect.options[catSelect.selectedIndex]?.text || 'General';
 
     const payload = {
-      name: document.getElementById('prod-name').value,
-      brand: document.getElementById('prod-brand').value,
-      model: document.getElementById('prod-model').value,
+      name: document.getElementById('prod-name').value.trim(),
+      brand: document.getElementById('prod-brand').value.trim(),
+      model: document.getElementById('prod-model').value.trim(),
       category_id: catSelect.value,
       category_name: catName,
       price: document.getElementById('prod-price').value ? parseFloat(document.getElementById('prod-price').value) : null,
-      description: document.getElementById('prod-desc').value,
-      description_ml: document.getElementById('prod-desc-ml').value,
-      promo_info: document.getElementById('prod-promo').value,
-      features_json: document.getElementById('prod-features').value || '[]'
+      image_url: document.getElementById('prod-image-url').value.trim(),
+      description: document.getElementById('prod-desc').value.trim(),
+      description_ml: document.getElementById('prod-desc-ml').value.trim(),
+      promo_info: document.getElementById('prod-promo').value.trim(),
+      features_json: document.getElementById('prod-features').value.trim() || '[]',
+      availability: 'In Stock'
     };
+
+    const createAdCheckbox = document.getElementById('prod-create-ad');
+    const adPriority = document.getElementById('prod-ad-priority')?.value || '3';
 
     try {
       if (id) {
         await apiUpdateProduct(id, payload);
-        showToast('Product updated successfully!');
+        showToast('Product updated successfully!', 'success');
+        const idx = productsList.findIndex(p => p.id === id);
+        if (idx !== -1) {
+          productsList[idx] = { ...productsList[idx], ...payload };
+        }
       } else {
-        await apiCreateProduct(payload);
-        showToast('Product created successfully!');
+        const res = await apiCreateProduct(payload);
+        showToast('Product created successfully!', 'success');
+        const createdProd = res.product || { ...payload, id: 'prod_' + Date.now() };
+        productsList.unshift(createdProd);
+
+        // Also create Live Advertisement Poster if requested
+        if (createAdCheckbox && createAdCheckbox.checked) {
+          try {
+            await apiCreateAdvertisement({
+              title: createdProd.name,
+              product_id: createdProd.id,
+              category_id: createdProd.category_id,
+              category_name: createdProd.category_name,
+              poster_url: createdProd.image_url || '/assets/ads/custom_poster.png',
+              short_desc: createdProd.description || createdProd.name,
+              short_desc_ml: createdProd.description_ml || '',
+              detailed_desc: createdProd.description || '',
+              price: createdProd.price,
+              priority: parseInt(adPriority),
+              status: 'active',
+              display_page_id: 1
+            });
+            showToast('Live Advertisement Poster created & activated!', 'success');
+          } catch(e) {}
+        }
       }
+
       closeModal('modal-product');
-      loadProducts();
+      renderProductsTable();
+      const statEl = document.getElementById('stat-total-products');
+      if (statEl) statEl.textContent = productsList.length;
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -594,22 +720,50 @@ function renderAdsTable() {
   const tbody = document.getElementById('ads-table-body');
   if (!tbody) return;
 
+  if (adsList.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 48px 20px; color: var(--text-muted);">
+          <div style="font-size: 32px; margin-bottom: 12px;">📢</div>
+          <div style="font-size: 15px; font-weight: 700; color: #e2e8f0; margin-bottom: 6px;">No Advertisements Created Yet</div>
+          <p style="font-size: 13px; color: #94a3b8; max-width: 440px; margin: 0 auto 16px;">
+            Create your first advertisement poster to broadcast on the robot screen.
+          </p>
+          <button type="button" class="btn btn-primary" onclick="document.getElementById('btn-new-advertisement').click()">+ Create Advertisement Poster</button>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
   tbody.innerHTML = adsList.map(ad => `
     <tr>
       <td>
-        <img src="${ad.poster_url}" style="width:40px; height:40px; border-radius:4px; object-fit:cover; vertical-align:middle; margin-right:8px;" onerror="this.src='/assets/ads/gaming_laptop.svg'">
-        <strong>${ad.title}</strong>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          ${ad.poster_url 
+            ? `<img src="${ad.poster_url}" style="width:44px; height:44px; border-radius:6px; object-fit:cover; border:1px solid var(--border-color);" onerror="this.outerHTML='<div style=\\'width:44px;height:44px;border-radius:6px;background:rgba(0,240,255,0.1);border:1px solid var(--border-color);display:flex;align-items:center;justify-content:center;font-size:20px;\\'>📢</div>'">` 
+            : `<div style="width:44px; height:44px; border-radius:6px; background:rgba(0,240,255,0.1); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; font-size:20px;">📢</div>`
+          }
+          <div>
+            <strong style="color: #fff; font-size: 14px;">${ad.title}</strong>
+            ${ad.short_desc ? `<br><small style="color: var(--text-dim);">${ad.short_desc.slice(0, 50)}</small>` : ''}
+          </div>
+        </div>
       </td>
       <td><span class="status-pill">${ad.category_name || 'General'}</span></td>
-      <td>Priority ${ad.priority}</td>
+      <td>Priority ${ad.priority || 2}</td>
       <td>Page ${ad.display_page_id || 1}</td>
-      <td><span class="status-pill ${ad.status === 'active' ? 'online' : 'offline'}">${ad.status.toUpperCase()}</span></td>
+      <td><span class="status-pill ${ad.status === 'active' ? 'online' : 'offline'}">${(ad.status || 'SCHEDULED').toUpperCase()}</span></td>
       <td>
-        <button class="btn btn-primary btn-sm" onclick="playNow('${ad.id}')">▶ Play Now</button>
-        ${ad.status === 'active' 
-          ? `<button class="btn btn-secondary btn-sm" onclick="pauseAd('${ad.id}')">⏸ Pause</button>` 
-          : `<button class="btn btn-secondary btn-sm" onclick="resumeAd('${ad.id}')">Resume</button>`
-        }
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <button class="btn btn-primary btn-sm" onclick="playNow('${ad.id}')">▶ Play</button>
+          ${ad.status === 'active' 
+            ? `<button class="btn btn-secondary btn-sm" onclick="pauseAd('${ad.id}')">⏸</button>` 
+            : `<button class="btn btn-secondary btn-sm" onclick="resumeAd('${ad.id}')">▶</button>`
+          }
+          <button class="btn btn-secondary btn-sm" onclick="editAd('${ad.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteAd('${ad.id}', '${(ad.title || 'ad').replace(/'/g, "\\'")}')">🗑️</button>
+        </div>
       </td>
     </tr>
   `).join('');
@@ -618,7 +772,7 @@ function renderAdsTable() {
 window.playNow = async (id) => {
   try {
     await apiPlayNow(id);
-    showToast('Broadcast command dispatched to robot display & kiosk!', 'success');
+    showToast('Broadcast command dispatched to robot display!', 'success');
     loadAdvertisements();
     loadOverview();
   } catch (err) {
@@ -645,6 +799,182 @@ window.resumeAd = async (id) => {
     showToast(err.message, 'error');
   }
 };
+
+window.deleteAd = async (id, title) => {
+  if (confirm(`Are you sure you want to delete advertisement "${title || 'this item'}"?`)) {
+    try {
+      await apiDeleteAdvertisement(id);
+      showToast(`Deleted "${title || 'ad'}"`, 'success');
+      adsList = adsList.filter(a => a.id !== id);
+      renderAdsTable();
+      const totalAdsEl = document.getElementById('stat-total-ads');
+      if (totalAdsEl) totalAdsEl.textContent = adsList.length;
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+};
+
+window.editAd = (id) => {
+  const ad = adsList.find(a => a.id === id);
+  if (!ad) return;
+
+  // Populate products dropdown
+  const prodSelect = document.getElementById('ad-product');
+  if (prodSelect) {
+    prodSelect.innerHTML = '<option value="">-- None / Standalone Ad --</option>' +
+      productsList.map(p => `<option value="${p.id}">${p.name} (₹${p.price || 0})</option>`).join('');
+    prodSelect.value = ad.product_id || '';
+  }
+
+  // Populate categories dropdown
+  const catSelect = document.getElementById('ad-category');
+  if (catSelect) {
+    catSelect.innerHTML = categoriesList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    catSelect.value = ad.category_id || '';
+  }
+
+  document.getElementById('ad-id').value = ad.id;
+  document.getElementById('ad-title').value = ad.title || '';
+  document.getElementById('ad-poster-url').value = ad.poster_url || '';
+  document.getElementById('ad-short-desc').value = ad.short_desc || '';
+  document.getElementById('ad-short-desc-ml').value = ad.short_desc_ml || '';
+  document.getElementById('ad-price').value = ad.price || '';
+  document.getElementById('ad-page-id').value = ad.display_page_id || '1';
+  document.getElementById('ad-priority').value = ad.priority || '2';
+
+  // Preview
+  const previewImg = document.getElementById('ad-poster-img');
+  const placeholder = document.getElementById('ad-poster-placeholder');
+  if (ad.poster_url && previewImg) {
+    previewImg.src = ad.poster_url;
+    previewImg.style.display = 'block';
+    if (placeholder) placeholder.style.display = 'none';
+  } else if (previewImg) {
+    previewImg.style.display = 'none';
+    if (placeholder) placeholder.style.display = 'block';
+  }
+
+  document.getElementById('modal-ad-title').textContent = 'Edit Advertisement Poster';
+  openModal('modal-advertisement');
+};
+
+// New Advertisement Button Listener
+const btnNewAd = document.getElementById('btn-new-advertisement');
+if (btnNewAd) {
+  btnNewAd.addEventListener('click', () => {
+    // Populate products dropdown
+    const prodSelect = document.getElementById('ad-product');
+    if (prodSelect) {
+      prodSelect.innerHTML = '<option value="">-- None / Standalone Ad --</option>' +
+        productsList.map(p => `<option value="${p.id}">${p.name} (₹${p.price || 0})</option>`).join('');
+    }
+    // Populate categories dropdown
+    const catSelect = document.getElementById('ad-category');
+    if (catSelect) {
+      catSelect.innerHTML = categoriesList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    }
+
+    const form = document.getElementById('form-advertisement');
+    if (form) form.reset();
+    document.getElementById('ad-id').value = '';
+    const previewImg = document.getElementById('ad-poster-img');
+    const placeholder = document.getElementById('ad-poster-placeholder');
+    if (previewImg) previewImg.style.display = 'none';
+    if (placeholder) placeholder.style.display = 'block';
+    document.getElementById('modal-ad-title').textContent = 'Create Advertisement Poster';
+    openModal('modal-advertisement');
+  });
+}
+
+// Advertisement image file upload
+const adFileInput = document.getElementById('ad-poster-file');
+if (adFileInput) {
+  adFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target.result;
+      document.getElementById('ad-poster-url').value = dataUrl;
+      const previewImg = document.getElementById('ad-poster-img');
+      const placeholder = document.getElementById('ad-poster-placeholder');
+      if (previewImg) {
+        previewImg.src = dataUrl;
+        previewImg.style.display = 'block';
+      }
+      if (placeholder) placeholder.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Advertisement URL input live preview
+const adUrlInput = document.getElementById('ad-poster-url');
+if (adUrlInput) {
+  adUrlInput.addEventListener('input', (e) => {
+    const url = e.target.value.trim();
+    const previewImg = document.getElementById('ad-poster-img');
+    const placeholder = document.getElementById('ad-poster-placeholder');
+    if (url && previewImg) {
+      previewImg.src = url;
+      previewImg.style.display = 'block';
+      if (placeholder) placeholder.style.display = 'none';
+    } else if (previewImg) {
+      previewImg.style.display = 'none';
+      if (placeholder) placeholder.style.display = 'block';
+    }
+  });
+}
+
+// Advertisement Form Submit
+const formAd = document.getElementById('form-advertisement');
+if (formAd) {
+  formAd.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('ad-id').value;
+    const catSelect = document.getElementById('ad-category');
+    const catName = catSelect ? catSelect.options[catSelect.selectedIndex]?.text || 'General' : 'General';
+    const prodSelect = document.getElementById('ad-product');
+    const prodId = prodSelect ? prodSelect.value : '';
+
+    const payload = {
+      title: document.getElementById('ad-title').value.trim(),
+      product_id: prodId || null,
+      category_id: catSelect ? catSelect.value : '',
+      category_name: catName,
+      poster_url: document.getElementById('ad-poster-url').value.trim(),
+      short_desc: document.getElementById('ad-short-desc').value.trim(),
+      short_desc_ml: document.getElementById('ad-short-desc-ml').value.trim(),
+      price: document.getElementById('ad-price').value ? parseFloat(document.getElementById('ad-price').value) : null,
+      display_page_id: parseInt(document.getElementById('ad-page-id').value || '1'),
+      priority: parseInt(document.getElementById('ad-priority').value || '2'),
+      status: 'active'
+    };
+
+    try {
+      if (id) {
+        await apiUpdateAdvertisement(id, payload);
+        showToast('Advertisement updated successfully!', 'success');
+        const idx = adsList.findIndex(a => a.id === id);
+        if (idx !== -1) adsList[idx] = { ...adsList[idx], ...payload };
+      } else {
+        const res = await apiCreateAdvertisement(payload);
+        showToast('Advertisement created & activated!', 'success');
+        const createdAd = res.advertisement || { ...payload, id: 'ad_' + Date.now() };
+        adsList.unshift(createdAd);
+      }
+
+      closeModal('modal-advertisement');
+      renderAdsTable();
+      const totalAdsEl = document.getElementById('stat-total-ads');
+      if (totalAdsEl) totalAdsEl.textContent = adsList.length;
+      loadOverview();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  });
+}
 
 // ----------------------------------------------------------------------------
 // 5. CAMERA VISION & LIVE STREAM WITH NO SIGNAL SCREEN
