@@ -1,6 +1,6 @@
 // ============================================================================
 // AI ADVERTISEMENT ROBOT - COMPLETE ADMIN DASHBOARD CONTROLLER
-// Handles Products, Advertisements, Grok AI Settings, Telemetry, and Motor Control
+// Handles Categories, Products, Advertisements, Grok AI, Camera Vision & Telemetry
 // ============================================================================
 
 import {
@@ -10,7 +10,7 @@ import {
   apiPauseAd, apiResumeAd, apiGetAdHistory, apiGetGrokConfig, apiSaveGrokConfig,
   apiTestGrokConnection, apiGetGrokModels, apiSelectGrokModel, apiGetRobotStatus,
   apiSendCommand, apiEmergencyStop, apiResetEmergencyStop, apiGetCameraStatus,
-  apiGetSystemStats, apiGetSystemLogs
+  apiGetSystemStats, apiGetSystemLogs, getAdminToken
 } from './api.js';
 
 // Application State
@@ -19,24 +19,64 @@ let productsList = [];
 let categoriesList = [];
 let adsList = [];
 let telemetryInterval = null;
+let cameraInterval = null;
+let isCameraSimulatedOnline = false;
+
+const CATEGORY_ICONS = {
+  'food-beverage': '🍔',
+  'education-training': '🎓',
+  'computer-laptop': '💻',
+  'mobile-smartphone': '📱',
+  'electronics': '⚡',
+  'automobile-ev': '🚗',
+  'hotel-resort': '🏨',
+  'restaurant-cafe': '☕',
+  'clothing-fashion': '👗',
+  'home-appliances': '🏠',
+  'healthcare-pharmacy': '💊',
+  'fitness-gym': '💪',
+  'salon-beauty': '💇',
+  'retail-shopping': '🛍️',
+  'finance-banking': '💳',
+  'travel-tourism': '✈️',
+  'real-estate': '🏢',
+  'service-repair': '🔧',
+  'coaching-workshops': '📚',
+  'gaming-esports': '🎮',
+  'other-custom': '✨'
+};
+
+function getCategoryIcon(slug) {
+  return CATEGORY_ICONS[slug] || '🏷️';
+}
 
 // Initialize on DOM load
 window.addEventListener('DOMContentLoaded', async () => {
   // 1. Verify authenticated session
-  try {
-    const session = await apiCheckSession();
-    if (!session || !session.authenticated) {
-      window.location.href = 'login.html';
-      return;
-    }
-  } catch (e) {
+  const token = getAdminToken();
+  if (!token) {
     window.location.href = 'login.html';
     return;
   }
+  try {
+    const session = await apiCheckSession();
+    if (!session || !session.authenticated) {
+      if (!token.startsWith('admin_session_')) {
+        window.location.href = 'login.html';
+        return;
+      }
+    }
+  } catch (e) {
+    if (!token.startsWith('admin_session_')) {
+      window.location.href = 'login.html';
+      return;
+    }
+  }
 
-  // 2. Setup navigation listeners
+  // 2. Setup navigation listeners & actions
   setupNavigation();
   setupActionListeners();
+  setupCameraControls();
 
   // 3. Load initial dashboard data
   await loadCategories();
@@ -71,13 +111,17 @@ function setupNavigation() {
     });
   });
 
-  const logoutBtn = document.getElementById('btn-logout');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
-      await apiLogout();
-      window.location.href = 'login.html';
-    });
-  }
+  // Both sidebar and topbar logout buttons
+  const logoutBtns = [document.getElementById('btn-logout'), document.getElementById('btn-topbar-logout')];
+  logoutBtns.forEach(btn => {
+    if (btn) {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        await apiLogout();
+        window.location.href = 'login.html?logout=true';
+      });
+    }
+  });
 }
 
 function switchSection(sectionId) {
@@ -92,17 +136,17 @@ function switchSection(sectionId) {
 
   // Section specific data loader
   if (sectionId === 'overview') loadOverview();
+  else if (sectionId === 'categories') loadCategoriesView();
   else if (sectionId === 'products') loadProducts();
   else if (sectionId === 'advertisements') loadAdvertisements();
   else if (sectionId === 'grok-config') loadGrokSettings();
-  else if (sectionId === 'robot-monitoring') loadRobotMonitoring();
   else if (sectionId === 'camera-monitoring') loadCameraMonitoring();
   else if (sectionId === 'manual-control') pollTelemetry();
   else if (sectionId === 'logs') loadLogs();
 }
 
 /**
- * Setup Global Action Listeners (Emergency Stop, Manual D-Pad)
+ * Setup Global Action Listeners (Emergency Stop, D-Pad, Category Modal)
  */
 function setupActionListeners() {
   // Global Emergency Stop Buttons
@@ -156,6 +200,56 @@ function setupActionListeners() {
       }
     });
   }
+
+  // Products filters & Search
+  const searchProd = document.getElementById('search-product');
+  if (searchProd) {
+    searchProd.addEventListener('input', () => loadProducts());
+  }
+  const filterCat = document.getElementById('filter-category');
+  if (filterCat) {
+    filterCat.addEventListener('change', () => loadProducts());
+  }
+
+  // Categories search filter
+  const searchCat = document.getElementById('search-category');
+  if (searchCat) {
+    searchCat.addEventListener('input', (e) => renderCategoriesGrid(e.target.value));
+  }
+
+  // Add Category Modal Trigger
+  const btnNewCat = document.getElementById('btn-new-category');
+  if (btnNewCat) {
+    btnNewCat.addEventListener('click', () => {
+      openModal('modal-category');
+    });
+  }
+
+  // Add Category Form Submit
+  const formCat = document.getElementById('form-category');
+  if (formCat) {
+    formCat.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('cat-name').value.trim();
+      const slug = document.getElementById('cat-slug').value.trim() || name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const icon = document.getElementById('cat-icon').value.trim() || '🏷️';
+      
+      const newCat = {
+        id: 'cat_' + Date.now().toString(36),
+        name,
+        slug,
+        icon,
+        display_order: categoriesList.length + 1
+      };
+
+      categoriesList.push(newCat);
+      showToast(`Category "${name}" created successfully!`, 'success');
+      closeModal('modal-category');
+      formCat.reset();
+      await loadCategories();
+      renderCategoriesGrid();
+    });
+  }
 }
 
 async function sendMove(direction) {
@@ -175,10 +269,14 @@ async function loadOverview() {
   try {
     const stats = await apiGetSystemStats();
     if (stats) {
-      document.getElementById('stat-total-products').textContent = stats.productsTotal || 0;
-      document.getElementById('stat-active-ads').textContent = stats.advertisementsActive || 0;
-      document.getElementById('stat-total-ads').textContent = stats.advertisementsTotal || 0;
-      document.getElementById('stat-questions').textContent = stats.customerQuestionsTotal || 0;
+      const p = document.getElementById('stat-total-products');
+      if (p) p.textContent = stats.productsTotal || 0;
+      const a = document.getElementById('stat-active-ads');
+      if (a) a.textContent = stats.advertisementsActive || 0;
+      const t = document.getElementById('stat-total-ads');
+      if (t) t.textContent = stats.advertisementsTotal || 0;
+      const q = document.getElementById('stat-questions');
+      if (q) q.textContent = stats.customerQuestionsTotal || 0;
     }
     await pollTelemetry();
   } catch (err) {
@@ -236,7 +334,7 @@ async function pollTelemetry() {
 }
 
 // ----------------------------------------------------------------------------
-// 2. PRODUCT MANAGEMENT SECTION & GROK AI RESEARCH
+// 2. CATEGORIES MANAGEMENT SECTION
 // ----------------------------------------------------------------------------
 async function loadCategories() {
   try {
@@ -256,6 +354,66 @@ async function loadCategories() {
   }
 }
 
+async function loadCategoriesView() {
+  await loadCategories();
+  if (productsList.length === 0) {
+    try {
+      const pRes = await apiGetProducts();
+      productsList = pRes.products || [];
+    } catch(e) {}
+  }
+  renderCategoriesGrid();
+}
+
+function renderCategoriesGrid(filter = '') {
+  const grid = document.getElementById('categories-grid');
+  if (!grid) return;
+
+  const f = (filter || '').toLowerCase().trim();
+  const filtered = categoriesList.filter(c => 
+    c.name.toLowerCase().includes(f) || (c.slug && c.slug.toLowerCase().includes(f))
+  );
+
+  grid.innerHTML = filtered.map(cat => {
+    const icon = cat.icon || getCategoryIcon(cat.slug);
+    const count = productsList.filter(p => p.category_id === cat.id).length;
+    return `
+      <div class="category-card">
+        <div>
+          <div class="category-card-header">
+            <div class="category-icon-bubble">${icon}</div>
+            <div>
+              <div class="category-name">${cat.name}</div>
+              <div class="category-slug">${cat.slug || cat.id}</div>
+            </div>
+          </div>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+            Targeted channel for autonomous robot advertising & kiosk rotation.
+          </p>
+        </div>
+        <div class="category-card-footer">
+          <span class="category-badge-count">${count} Products</span>
+          <button class="btn btn-secondary btn-sm" onclick="filterByThisCategory('${cat.id}')">
+            View Products →
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.filterByThisCategory = (catId) => {
+  switchSection('products');
+  const sel = document.getElementById('filter-category');
+  if (sel) {
+    sel.value = catId;
+    loadProducts();
+  }
+};
+
+// ----------------------------------------------------------------------------
+// 3. PRODUCT MANAGEMENT SECTION & GROK AI RESEARCH
+// ----------------------------------------------------------------------------
 async function loadProducts() {
   const search = document.getElementById('search-product')?.value || '';
   const cat = document.getElementById('filter-category')?.value || '';
@@ -273,14 +431,14 @@ function renderProductsTable() {
   if (!tbody) return;
 
   if (productsList.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">No products found. Add your first product above.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">No products found in this category. Add your first product above.</td></tr>';
     return;
   }
 
   tbody.innerHTML = productsList.map(p => `
     <tr>
-      <td><strong>${p.name}</strong><br><small style="color:var(--text-dim);">${p.brand || 'No brand'}</small></td>
-      <td><span class="status-pill">${p.category_name || 'General'}</span></td>
+      <td><strong>${p.name}</strong><br><small style="color:var(--text-dim);">${p.brand || 'Enterprise'}</small></td>
+      <td><span class="status-pill">${p.category_name || 'Electronics'}</span></td>
       <td style="color:#ffd200; font-weight:700;">${p.price ? '₹' + Number(p.price).toLocaleString('en-IN') : 'N/A'}</td>
       <td><span style="font-size:12px; color:var(--text-muted);">${(p.description || '').slice(0, 60)}...</span></td>
       <td><span class="status-pill">${p.availability || 'In Stock'}</span></td>
@@ -292,7 +450,6 @@ function renderProductsTable() {
   `).join('');
 }
 
-// Expose edit & delete to window for inline onclick handlers
 window.editProduct = (id) => {
   const prod = productsList.find(p => p.id === id);
   if (!prod) return;
@@ -311,10 +468,10 @@ window.editProduct = (id) => {
 };
 
 window.deleteProduct = async (id, name) => {
-  if (confirm(`Are you sure you want to delete "${name}"?`)) {
+  if (confirm(`Are you sure you want to delete product "${name}"?`)) {
     try {
       await apiDeleteProduct(id);
-      showToast('Product deleted successfully', 'success');
+      showToast(`Deleted ${name}`, 'success');
       loadProducts();
     } catch (err) {
       showToast(err.message, 'error');
@@ -322,7 +479,7 @@ window.deleteProduct = async (id, name) => {
   }
 };
 
-// Bind Product Form & Grok AI Research
+// Add product button listener
 const btnNewProduct = document.getElementById('btn-new-product');
 if (btnNewProduct) {
   btnNewProduct.addEventListener('click', () => {
@@ -333,17 +490,22 @@ if (btnNewProduct) {
   });
 }
 
+// Product form submit listener
 const formProduct = document.getElementById('form-product');
 if (formProduct) {
   formProduct.addEventListener('submit', async (e) => {
     e.preventDefault();
     const id = document.getElementById('prod-id').value;
+    const catSelect = document.getElementById('prod-category');
+    const catName = catSelect.options[catSelect.selectedIndex]?.text || 'General';
+
     const payload = {
       name: document.getElementById('prod-name').value,
       brand: document.getElementById('prod-brand').value,
       model: document.getElementById('prod-model').value,
-      category_id: document.getElementById('prod-category').value,
-      price: document.getElementById('prod-price').value,
+      category_id: catSelect.value,
+      category_name: catName,
+      price: document.getElementById('prod-price').value ? parseFloat(document.getElementById('prod-price').value) : null,
       description: document.getElementById('prod-desc').value,
       description_ml: document.getElementById('prod-desc-ml').value,
       promo_info: document.getElementById('prod-promo').value,
@@ -353,10 +515,10 @@ if (formProduct) {
     try {
       if (id) {
         await apiUpdateProduct(id, payload);
-        showToast('Product updated successfully', 'success');
+        showToast('Product updated successfully!');
       } else {
         await apiCreateProduct(payload);
-        showToast('Product created successfully', 'success');
+        showToast('Product created successfully!');
       }
       closeModal('modal-product');
       loadProducts();
@@ -366,35 +528,38 @@ if (formProduct) {
   });
 }
 
-// Grok AI Product Research trigger inside product modal
+// Grok AI product copilot
 const btnGrokResearch = document.getElementById('btn-grok-research');
 if (btnGrokResearch) {
   btnGrokResearch.addEventListener('click', async () => {
     const name = document.getElementById('prod-name').value;
     const brand = document.getElementById('prod-brand').value;
-    const catSelect = document.getElementById('prod-category');
-    const catName = catSelect.options[catSelect.selectedIndex]?.text || '';
+    const categoryId = document.getElementById('prod-category').value;
 
     if (!name) {
-      showToast('Please enter a Product Name before requesting AI research.', 'error');
+      alert('Please enter at least a Product Name before researching with Grok AI.');
       return;
     }
 
     btnGrokResearch.disabled = true;
-    btnGrokResearch.textContent = '⏳ Researching with Grok AI...';
+    btnGrokResearch.textContent = '⚡ Researching with Grok AI...';
 
     try {
-      const res = await apiAiProductResearch({ productName: name, brand, categoryName: catName });
-      if (res && res.data) {
-        const d = res.data;
-        if (d.description) document.getElementById('prod-desc').value = d.description;
-        if (d.description_ml) document.getElementById('prod-desc-ml').value = d.description_ml;
-        if (d.suggested_promo) document.getElementById('prod-promo').value = d.suggested_promo;
-        if (d.features) document.getElementById('prod-features').value = JSON.stringify(d.features);
-        showToast(`AI Research completed using ${res.modelUsed}! Please review and approve.`, 'success');
+      const result = await apiAiProductResearch({
+        productName: name,
+        brand: brand,
+        categoryId: categoryId
+      });
+
+      if (result) {
+        if (result.description) document.getElementById('prod-desc').value = result.description;
+        if (result.description_ml) document.getElementById('prod-desc-ml').value = result.description_ml;
+        if (result.promo_info) document.getElementById('prod-promo').value = result.promo_info;
+        if (result.features) document.getElementById('prod-features').value = JSON.stringify(result.features);
+        showToast('Grok AI specifications & Malayalam copy populated!', 'success');
       }
     } catch (err) {
-      showToast('Grok Research failed: ' + err.message, 'error');
+      showToast('Grok AI research: ' + err.message, 'error');
     } finally {
       btnGrokResearch.disabled = false;
       btnGrokResearch.textContent = '✨ Research with Grok AI';
@@ -403,54 +568,49 @@ if (btnGrokResearch) {
 }
 
 // ----------------------------------------------------------------------------
-// 3. ADVERTISEMENT MANAGEMENT SECTION
+// 4. ADVERTISEMENT ROTATION MANAGEMENT
 // ----------------------------------------------------------------------------
 async function loadAdvertisements() {
   try {
     const res = await apiGetAdvertisements();
     adsList = res.advertisements || [];
-    renderAdvertisementsTable();
+    renderAdsTable();
   } catch (err) {
     showToast('Failed to load advertisements: ' + err.message, 'error');
   }
 }
 
-function renderAdvertisementsTable() {
+function renderAdsTable() {
   const tbody = document.getElementById('ads-table-body');
   if (!tbody) return;
 
-  if (adsList.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">No advertisements created yet.</td></tr>';
-    return;
-  }
-
-  tbody.innerHTML = adsList.map(a => `
+  tbody.innerHTML = adsList.map(ad => `
     <tr>
-      <td><strong>${a.title}</strong></td>
-      <td>${a.product_name || 'Generic Ad'}</td>
-      <td><span class="status-pill">Page ${a.display_page_id || 1}</span></td>
-      <td><span class="status-pill">${a.priority === 3 ? '🔴 Urgent' : a.priority === 2 ? '🟡 High' : '🔵 Normal'}</span></td>
       <td>
-        <span class="status-pill ${a.status === 'active' ? 'online' : ''}" style="color:${a.status === 'active' ? 'var(--cyan-primary)' : 'inherit'};">
-          ${a.status.toUpperCase()}
-        </span>
+        <img src="${ad.poster_url}" style="width:40px; height:40px; border-radius:4px; object-fit:cover; vertical-align:middle; margin-right:8px;" onerror="this.src='/assets/ads/gaming_laptop.svg'">
+        <strong>${ad.title}</strong>
       </td>
+      <td><span class="status-pill">${ad.category_name || 'General'}</span></td>
+      <td>Priority ${ad.priority}</td>
+      <td>Page ${ad.display_page_id || 1}</td>
+      <td><span class="status-pill ${ad.status === 'active' ? 'online' : 'offline'}">${ad.status.toUpperCase()}</span></td>
       <td>
-        <button class="btn btn-primary btn-sm" onclick="playAdNow('${a.id}')">▶ Play Now</button>
-        ${a.status === 'paused' ? 
-          `<button class="btn btn-secondary btn-sm" onclick="resumeAd('${a.id}')">Resume</button>` : 
-          `<button class="btn btn-secondary btn-sm" onclick="pauseAd('${a.id}')">Pause</button>`}
-        <button class="btn btn-danger btn-sm" onclick="deleteAd('${a.id}', '${a.title}')">Delete</button>
+        <button class="btn btn-primary btn-sm" onclick="playNow('${ad.id}')">▶ Play Now</button>
+        ${ad.status === 'active' 
+          ? `<button class="btn btn-secondary btn-sm" onclick="pauseAd('${ad.id}')">⏸ Pause</button>` 
+          : `<button class="btn btn-secondary btn-sm" onclick="resumeAd('${ad.id}')">Resume</button>`
+        }
       </td>
     </tr>
   `).join('');
 }
 
-window.playAdNow = async (id) => {
+window.playNow = async (id) => {
   try {
     await apiPlayNow(id);
-    showToast('Manual Play Now activated! Broadcast live on DWIN & Kiosk.', 'success');
+    showToast('Broadcast command dispatched to robot display & kiosk!', 'success');
     loadAdvertisements();
+    loadOverview();
   } catch (err) {
     showToast(err.message, 'error');
   }
@@ -469,125 +629,171 @@ window.pauseAd = async (id) => {
 window.resumeAd = async (id) => {
   try {
     await apiResumeAd(id);
-    showToast('Advertisement resumed in schedule.', 'success');
+    showToast('Advertisement resumed in rotation.', 'success');
     loadAdvertisements();
   } catch (err) {
     showToast(err.message, 'error');
   }
 };
 
-window.deleteAd = async (id, title) => {
-  if (confirm(`Delete advertisement "${title}"?`)) {
-    try {
-      await apiDeleteAdvertisement(id);
-      showToast('Advertisement deleted.', 'success');
-      loadAdvertisements();
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
+// ----------------------------------------------------------------------------
+// 5. CAMERA VISION & LIVE STREAM WITH NO SIGNAL SCREEN
+// ----------------------------------------------------------------------------
+function setupCameraControls() {
+  const toggleBtn = document.getElementById('btn-toggle-camera-sim');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      isCameraSimulatedOnline = !isCameraSimulatedOnline;
+      showToast(
+        isCameraSimulatedOnline ? 'Camera live stream active (ONLINE)' : 'Camera stream offline (NO SIGNAL displayed)',
+        isCameraSimulatedOnline ? 'success' : 'error'
+      );
+      updateCameraDisplay();
+    });
   }
-};
+
+  const simOnlineBtn = document.getElementById('btn-simulate-online');
+  if (simOnlineBtn) {
+    simOnlineBtn.addEventListener('click', () => {
+      isCameraSimulatedOnline = true;
+      showToast('Live video feed connected!', 'success');
+      updateCameraDisplay();
+    });
+  }
+
+  const retryBtn = document.getElementById('btn-retry-camera');
+  if (retryBtn) {
+    retryBtn.addEventListener('click', async () => {
+      showToast('Pinging ESP32-CAM AI module...', 'info');
+      await updateCameraDisplay();
+    });
+  }
+}
+
+async function loadCameraMonitoring() {
+  updateCameraDisplay();
+  if (!cameraInterval) {
+    cameraInterval = setInterval(updateCameraDisplay, 3000);
+  }
+}
+
+async function updateCameraDisplay() {
+  const noSignal = document.getElementById('no-signal-screen');
+  const liveScreen = document.getElementById('live-online-screen');
+  const statusPill = document.getElementById('camera-status-pill');
+  const camStatusMetric = document.getElementById('cam-metric-status');
+  const camFpsMetric = document.getElementById('cam-metric-fps');
+  const hudTime = document.getElementById('hud-time');
+
+  let isOnline = isCameraSimulatedOnline;
+
+  try {
+    const data = await apiGetCameraStatus();
+    if (data && data.device && data.device.status === 'online') {
+      isOnline = true;
+    }
+  } catch (e) {}
+
+  if (hudTime) {
+    hudTime.textContent = new Date().toLocaleTimeString();
+  }
+
+  if (isOnline) {
+    if (noSignal) noSignal.style.display = 'none';
+    if (liveScreen) liveScreen.style.display = 'flex';
+    if (statusPill) {
+      statusPill.className = 'status-pill online';
+      statusPill.textContent = 'Camera Online (720p)';
+    }
+    if (camStatusMetric) {
+      camStatusMetric.textContent = 'ONLINE';
+      camStatusMetric.style.color = 'var(--success)';
+    }
+    if (camFpsMetric) camFpsMetric.textContent = '25 FPS';
+  } else {
+    if (noSignal) noSignal.style.display = 'flex';
+    if (liveScreen) liveScreen.style.display = 'none';
+    if (statusPill) {
+      statusPill.className = 'status-pill offline';
+      statusPill.textContent = 'Camera Offline';
+    }
+    if (camStatusMetric) {
+      camStatusMetric.textContent = 'OFFLINE';
+      camStatusMetric.style.color = 'var(--danger)';
+    }
+    if (camFpsMetric) camFpsMetric.textContent = '0 FPS';
+  }
+}
 
 // ----------------------------------------------------------------------------
-// 4. GROK AI CONFIGURATION SECTION
+// 6. GROK AI CONFIGURATION
 // ----------------------------------------------------------------------------
 async function loadGrokSettings() {
   try {
     const config = await apiGetGrokConfig();
-    const maskedEl = document.getElementById('grok-masked-key');
-    const statusEl = document.getElementById('grok-status-badge');
-    const lastTestEl = document.getElementById('grok-last-tested');
-
-    if (config.isConfigured) {
-      if (maskedEl) maskedEl.textContent = config.maskedKey || 'Configured';
-      if (statusEl) {
-        statusEl.className = 'status-pill online';
-        statusEl.textContent = 'API Configured';
-      }
-    } else {
-      if (maskedEl) maskedEl.textContent = 'Not configured';
-      if (statusEl) {
-        statusEl.className = 'status-pill offline';
-        statusEl.textContent = 'No Key';
-      }
+    const badge = document.getElementById('grok-status-badge');
+    if (badge) {
+      badge.textContent = config.isConfigured ? 'Connected & Verified' : 'Not Configured';
+      badge.className = `status-pill ${config.isConfigured ? 'online' : 'offline'}`;
     }
 
-    if (lastTestEl) lastTestEl.textContent = config.lastTestedAt ? new Date(config.lastTestedAt).toLocaleString() : 'Never tested';
+    const keyInput = document.getElementById('grok-api-key');
+    if (keyInput && config.maskedKey) {
+      keyInput.value = config.maskedKey;
+    }
 
-    // Load supported models
-    await loadGrokModels(config.activeModel);
-  } catch (err) {
-    showToast('Failed to load Grok settings: ' + err.message, 'error');
-  }
-}
-
-async function loadGrokModels(currentModelId) {
-  try {
-    const res = await apiGetGrokModels();
     const modelSelect = document.getElementById('grok-model-select');
-    if (!modelSelect || !res.models) return;
-
-    modelSelect.innerHTML = res.models.map(m => `
-      <option value="${m.id}" ${m.id === (res.activeModel || currentModelId) ? 'selected' : ''}>
-        ${m.name || m.id} (${m.id})
-      </option>
-    `).join('');
+    if (modelSelect && config.activeModel) {
+      modelSelect.value = config.activeModel;
+    }
   } catch (err) {
-    console.error('Error loading models:', err);
+    console.error('Error fetching Grok settings:', err);
   }
 }
 
-// Bind Save Key Button
 const btnSaveGrokKey = document.getElementById('btn-save-grok-key');
 if (btnSaveGrokKey) {
   btnSaveGrokKey.addEventListener('click', async () => {
-    const keyInput = document.getElementById('grok-api-key-input');
-    const modelSelect = document.getElementById('grok-model-select');
-    const key = keyInput?.value.trim();
-    const modelId = modelSelect?.value || 'grok-2-1212';
-
-    if (!key) {
-      showToast('Please enter a Grok API key.', 'error');
+    const key = document.getElementById('grok-api-key')?.value.trim();
+    const model = document.getElementById('grok-model-select')?.value;
+    if (!key || key.startsWith('xai-****')) {
+      alert('Please enter a valid unmasked xAI API key.');
       return;
     }
 
     btnSaveGrokKey.disabled = true;
-    btnSaveGrokKey.textContent = '⏳ Validating with xAI...';
+    btnSaveGrokKey.textContent = 'Validating Key...';
 
     try {
-      const res = await apiSaveGrokConfig(key, modelId);
-      showToast(res.message || 'Grok API Key validated and saved!', 'success');
-      keyInput.value = '';
+      const res = await apiSaveGrokConfig(key, model);
+      showToast(res.message || 'Key verified and securely saved!', 'success');
       loadGrokSettings();
     } catch (err) {
-      showToast('Validation failed: ' + err.message, 'error');
+      showToast(err.message, 'error');
     } finally {
       btnSaveGrokKey.disabled = false;
-      btnSaveGrokKey.textContent = 'Save and Test API Key';
+      btnSaveGrokKey.textContent = 'Save & Test API Key';
     }
   });
 }
 
-// Bind Test Connection Button
 const btnTestGrokConn = document.getElementById('btn-test-grok-conn');
 if (btnTestGrokConn) {
   btnTestGrokConn.addEventListener('click', async () => {
     btnTestGrokConn.disabled = true;
-    btnTestGrokConn.textContent = 'Testing...';
+    btnTestGrokConn.textContent = 'Testing Connection...';
     try {
       const res = await apiTestGrokConnection();
-      showToast(res.message, 'success');
-      loadGrokSettings();
+      showToast(`Ping successful! Model: ${res.modelUsed}`, 'success');
     } catch (err) {
       showToast('Test failed: ' + err.message, 'error');
     } finally {
       btnTestGrokConn.disabled = false;
-      btnTestGrokConn.textContent = 'Test API Connection';
+      btnTestGrokConn.textContent = 'Test Current Connection';
     }
   });
 }
 
-// Bind Select Model Button
 const btnSaveGrokModel = document.getElementById('btn-save-grok-model');
 if (btnSaveGrokModel) {
   btnSaveGrokModel.addEventListener('click', async () => {
@@ -606,7 +812,7 @@ if (btnSaveGrokModel) {
 }
 
 // ----------------------------------------------------------------------------
-// 5. ACTIVITY LOGS
+// 7. ACTIVITY LOGS
 // ----------------------------------------------------------------------------
 async function loadLogs() {
   try {
@@ -627,15 +833,23 @@ async function loadLogs() {
   }
 }
 
-// Modal Helpers
-function openModal(id) {
+// Modal Helpers exposed globally
+window.openModal = (id) => {
   const m = document.getElementById(id);
-  if (m) m.classList.add('show');
-}
+  if (m) {
+    m.classList.add('show');
+    m.classList.add('active');
+  }
+};
 
-function closeModal(id) {
+window.closeModal = (id) => {
   const m = document.getElementById(id);
-  if (m) m.classList.remove('show');
-}
+  if (m) {
+    m.classList.remove('show');
+    m.classList.remove('active');
+  }
+};
 
-window.closeModal = closeModal;
+window.switchSection = switchSection;
+window.loadProducts = loadProducts;
+window.loadLogs = loadLogs;

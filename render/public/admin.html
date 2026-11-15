@@ -26,7 +26,11 @@
           <span>Overview</span>
         </a>
 
-        <div class="nav-group-title">Advertisement</div>
+        <div class="nav-group-title">Advertisement & Catalog</div>
+        <a class="nav-link" data-section="categories">
+          <span class="nav-icon">🏷️</span>
+          <span>Categories</span>
+        </a>
         <a class="nav-link" data-section="products">
           <span class="nav-icon">📦</span>
           <span>Products</span>
@@ -61,7 +65,7 @@
         <div class="nav-group-title">Artificial Intelligence</div>
         <a class="nav-link" data-section="grok-config">
           <span class="nav-icon">⚡</span>
-          <span>Grok AI Config</span>
+          <span>Groq AI Config</span>
         </a>
         <a class="nav-link" data-section="voice-assistant">
           <span class="nav-icon">🎙️</span>
@@ -100,6 +104,11 @@
             <span id="top-robot-text">Checking Robot...</span>
           </div>
 
+          <!-- View Live Camera Feed Button -->
+          <button id="btn-view-live-camera" class="btn btn-secondary btn-sm nav-link" data-section="camera-monitoring" style="display: flex; align-items: center; gap: 6px;">
+            🎥 View Live Feed
+          </button>
+
           <!-- Kiosk Shortcut -->
           <a href="kiosk.html" target="_blank" class="btn btn-secondary btn-sm">
             📺 View Live Kiosk
@@ -108,6 +117,11 @@
           <!-- Prominent Emergency Stop Button -->
           <button class="btn btn-estop trigger-estop">
             🛑 EMERGENCY STOP
+          </button>
+
+          <!-- Topbar Quick Logout -->
+          <button id="btn-topbar-logout" class="btn btn-secondary btn-sm" style="border-color: rgba(255, 23, 68, 0.4); color: #ff8080;" title="Sign out of Admin Dashboard">
+            🚪 Sign Out
           </button>
         </div>
       </header>
@@ -214,14 +228,37 @@
           </div>
         </section>
 
-        <!-- SECTION 2: PRODUCT MANAGEMENT -->
+        <!-- SECTION 2: CATEGORIES MANAGEMENT -->
+        <section id="section-categories" class="dashboard-section" style="display: none;">
+          <div class="panel-card">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">🏷️ Category Management</h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin: 4px 0 0 0;">
+                  21 Pre-configured Enterprise Categories for Automated Product &amp; Advertisement Rotation
+                </p>
+              </div>
+              <div style="display: flex; gap: 12px;">
+                <input type="text" id="search-category" class="form-control" placeholder="Search categories..." style="width: 220px;">
+                <button id="btn-new-category" class="btn btn-primary">+ Add Category</button>
+              </div>
+            </div>
+
+            <!-- Categories Grid -->
+            <div id="categories-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 16px;">
+              <!-- Dynamically populated via JavaScript -->
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 3: PRODUCT MANAGEMENT -->
         <section id="section-products" class="dashboard-section" style="display: none;">
           <div class="panel-card">
             <div class="panel-header">
               <h3 class="panel-title">📦 Product Catalog Management</h3>
               <div style="display: flex; gap: 12px;">
-                <input type="text" id="search-product" class="form-control" placeholder="Search products..." style="width: 220px;" oninput="loadProducts()">
-                <select id="filter-category" class="form-control" style="width: 180px;" onchange="loadProducts()">
+                <input type="text" id="search-product" class="form-control" placeholder="Search products..." style="width: 220px;">
+                <select id="filter-category" class="form-control" style="width: 180px;">
                   <option value="">All Categories</option>
                 </select>
                 <button id="btn-new-product" class="btn btn-primary">+ Add Product</button>
@@ -275,18 +312,21 @@
           </div>
         </section>
 
-        <!-- SECTION 4: GROK AI CONFIGURATION -->
+        <!-- SECTION 4: GROQ AI CONFIGURATION -->
         <section id="section-grok-config" class="dashboard-section" style="display: none;">
           <div class="panel-card" style="max-width: 800px; margin: 0 auto;">
             <div class="panel-header">
-              <h3 class="panel-title">⚡ xAI Grok API Configuration</h3>
+              <div>
+                <h3 class="panel-title">⚡ Groq Cloud LPU AI Engine</h3>
+                <span style="font-size: 12px; color: var(--text-muted);">Ultra-Fast AI Inference for Product Research &amp; Bilingual Voice Assistant</span>
+              </div>
               <span id="grok-status-badge" class="status-pill offline">No Key</span>
             </div>
 
             <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px; margin-bottom: 24px;">
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                  <strong style="color:#fff;">Active Grok API Key:</strong>
+                  <strong style="color:#fff;">Active Groq API Key:</strong>
                   <div id="grok-masked-key" style="font-family:monospace; font-size:15px; color:var(--cyan-primary); margin-top:4px;">
                     Not configured
                   </div>
@@ -299,31 +339,32 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Enter New or Replacement Grok API Key</label>
-              <input type="password" id="grok-api-key-input" class="form-control" placeholder="xai-••••••••••••••••••••••••••••••••">
+              <label class="form-label">Enter Groq API Key (gsk_...)</label>
+              <input type="password" id="grok-api-key-input" class="form-control" placeholder="gsk_••••••••••••••••••••••••••••••••">
               <small style="color:var(--text-dim); font-size:11px;">
-                Credentials are validated against the official xAI API before activation and stored with AES-256-GCM encryption in Cloudflare D1.
+                Directly supports GroqCloud keys (starts with <code>gsk_</code>). Encrypted and validated against official Groq LPU endpoint before activation.
               </small>
             </div>
 
             <div class="form-group">
-              <label class="form-label">Select Grok AI Model</label>
+              <label class="form-label">Select Groq AI Model</label>
               <select id="grok-model-select" class="form-control">
-                <option value="grok-2-1212">Grok 2 (Stable - 1212)</option>
-                <option value="grok-2-vision-1212">Grok 2 Vision (Multimodal)</option>
-                <option value="grok-beta">Grok Beta</option>
+                <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Versatile - Recommended Default)</option>
+                <option value="llama-3.1-8b-instant">Llama 3.1 8B (Instant - Ultra Fast Voice)</option>
+                <option value="mixtral-8x7b-32768">Mixtral 8x7B (High Context)</option>
+                <option value="gemma2-9b-it">Gemma 2 9B (Google Gemma on Groq)</option>
               </select>
               <small style="color:var(--text-dim); font-size:11px;">
-                Model IDs are dynamically validated. Switching models takes effect immediately across Voice Assistant and Product Research without redeployment.
+                Groq models run with near-instant inference speed (~500 tokens/sec) on specialized LPU hardware.
               </small>
             </div>
 
             <div style="display: flex; gap: 14px; margin-top: 24px;">
               <button id="btn-save-grok-key" class="btn btn-primary">
-                Save &amp; Test API Key
+                Save &amp; Test Groq Key
               </button>
               <button id="btn-test-grok-conn" class="btn btn-secondary">
-                Test Current Connection
+                Test Connection
               </button>
               <button id="btn-save-grok-model" class="btn btn-secondary">
                 Activate Selected Model
@@ -332,7 +373,96 @@
           </div>
         </section>
 
-        <!-- SECTION 5: MANUAL ROBOT CONTROL -->
+        <!-- SECTION 5: CAMERA VISION & LIVE STREAM -->
+        <section id="section-camera-monitoring" class="dashboard-section" style="display: none;">
+          <div class="panel-card">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">📷 ESP32-S3 AI Camera Live Stream</h3>
+                <span style="font-size: 12px; color: var(--text-muted);">Real-time Vision &amp; Human Tracking Broadcast</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span id="camera-status-pill" class="status-pill offline">Camera Offline</span>
+                <button id="btn-toggle-camera-sim" class="btn btn-secondary btn-sm">
+                  🔄 Toggle Online / Offline Signal
+                </button>
+              </div>
+            </div>
+
+            <!-- Live Video / NO SIGNAL Viewport Container -->
+            <div id="live-camera-viewport" class="camera-viewport-box">
+              <!-- When OFFLINE: Authentic Animated NO SIGNAL Screen -->
+              <div id="no-signal-screen" class="no-signal-container">
+                <div class="test-color-bars">
+                  <div class="cbar c-white"></div>
+                  <div class="cbar c-yellow"></div>
+                  <div class="cbar c-cyan"></div>
+                  <div class="cbar c-green"></div>
+                  <div class="cbar c-magenta"></div>
+                  <div class="cbar c-red"></div>
+                  <div class="cbar c-blue"></div>
+                </div>
+                <div class="no-signal-overlay">
+                  <div class="no-signal-badge">⚠️ NO SIGNAL</div>
+                  <h3 style="color: #fff; margin: 12px 0 6px 0; font-size: 18px; letter-spacing: 2px;">CAMERA FEED OFFLINE</h3>
+                  <p style="color: #94a3b8; font-size: 13px; max-width: 440px; line-height: 1.5; margin: 0 auto 16px auto;">
+                    No active video transmission detected from ESP32-CAM AI vision unit.
+                    Power on the camera unit or connect to local Wi-Fi to start live broadcast.
+                  </p>
+                  <div style="display: flex; justify-content: center; gap: 10px;">
+                    <button id="btn-retry-camera" class="btn btn-primary btn-sm">🔄 Retry Connection</button>
+                    <button id="btn-simulate-online" class="btn btn-secondary btn-sm">▶️ Preview Live Online Feed</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- When ONLINE: Active Video Stream with AI HUD -->
+              <div id="live-online-screen" class="live-stream-container" style="display: none;">
+                <div class="stream-hud-top">
+                  <span class="hud-badge rec"><span class="rec-dot"></span> LIVE 720p HD</span>
+                  <span class="hud-stat" id="hud-fps">25 FPS</span>
+                  <span class="hud-stat" id="hud-latency">34 ms Latency</span>
+                  <span class="hud-stat" id="hud-time"></span>
+                </div>
+
+                <div class="stream-ai-target">
+                  <div class="bounding-box">
+                    <span class="box-label">PERSON [ID #1] 94%</span>
+                    <div class="crosshair-center"></div>
+                  </div>
+                </div>
+
+                <div class="stream-hud-bottom">
+                  <span>AI TRACKING: LOCKED</span>
+                  <span>OBSTACLE RADAR: CLEAR (125.0 cm)</span>
+                  <span>ORIENTATION: CENTER</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Camera Telemetry Metrics -->
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 20px;">
+              <div class="stat-card" style="padding: 16px;">
+                <span class="stat-label">Camera Status</span>
+                <span id="cam-metric-status" class="stat-value" style="font-size: 18px; color: var(--danger);">OFFLINE</span>
+              </div>
+              <div class="stat-card" style="padding: 16px;">
+                <span class="stat-label">Frame Rate</span>
+                <span id="cam-metric-fps" class="stat-value" style="font-size: 18px;">0 FPS</span>
+              </div>
+              <div class="stat-card" style="padding: 16px;">
+                <span class="stat-label">Detections Today</span>
+                <span id="cam-metric-detections" class="stat-value" style="font-size: 18px;">12</span>
+              </div>
+              <div class="stat-card" style="padding: 16px;">
+                <span class="stat-label">Stream Resolution</span>
+                <span class="stat-value" style="font-size: 18px;">1280 × 720 HD</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 6: MANUAL ROBOT CONTROL -->
         <section id="section-manual-control" class="dashboard-section" style="display: none;">
           <div class="panel-card" style="max-width: 600px; margin: 0 auto; text-align: center;">
             <div class="panel-header">
@@ -443,14 +573,14 @@
           </div>
         </div>
 
-        <!-- Grok AI Copilot Trigger -->
+        <!-- Groq AI Copilot Trigger -->
         <div style="background: rgba(0, 240, 255, 0.08); border: 1px dashed var(--cyan-primary); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
           <div>
-            <strong style="color: #fff; font-size: 13px;">Grok AI Product Copilot</strong>
-            <p style="font-size: 11px; color: var(--text-muted); margin: 0;">Auto-generate Malayalam translation, specs, and highlights</p>
+            <strong style="color: #fff; font-size: 13px;">Groq AI Product Copilot</strong>
+            <p style="font-size: 11px; color: var(--text-muted); margin: 0;">Auto-generate Malayalam translation, specs, and highlights via Groq LPU</p>
           </div>
           <button type="button" id="btn-grok-research" class="btn btn-primary btn-sm">
-            ✨ Research with Grok AI
+            ⚡ Research with Groq AI
           </button>
         </div>
 
@@ -482,9 +612,49 @@
     </div>
   </div>
 
+  <!-- MODAL: ADD / EDIT CATEGORY -->
+  <div id="modal-category" class="modal-backdrop">
+    <div class="modal-content" style="max-width: 480px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 18px; font-weight: 800; color: #fff;">Add New Category</h3>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('modal-category')">✕</button>
+      </div>
+
+      <form id="form-category">
+        <div class="form-group">
+          <label class="form-label">Category Name *</label>
+          <input type="text" id="cat-name" class="form-control" placeholder="e.g. Smart Wearables" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Slug / Identifier</label>
+          <input type="text" id="cat-slug" class="form-control" placeholder="e.g. smart-wearables">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Display Icon (Emoji)</label>
+          <input type="text" id="cat-icon" class="form-control" placeholder="e.g. ⌚" value="🏷️">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-category')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Category</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
+  <script>
+    // Global modal helpers
+    function openModal(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('active');
+    }
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('active');
+    }
+  </script>
   <script type="module" src="src/admin.js"></script>
 </body>
 </html>

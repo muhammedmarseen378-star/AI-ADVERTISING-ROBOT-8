@@ -22,9 +22,15 @@
 The **`render`** folder at [`D:\WEBSITE\render`](file:///d:/WEBSITE/render) is a 100% self-contained deployment package engineered specifically for [Render.com](https://render.com):
 
 * ✅ **Direct Login on Root (`/`):** Visiting `https://<your-service>.onrender.com/` opens the **Administrator Login screen directly**.
+* ✅ **Manual Email Entry:** The email input field is fully unlocked and editable for manual typing with clean placeholders.
+* ✅ **Password Visibility Toggle:** Eye icon button (**👁️ / 🙈**) to show or hide the password.
+* ✅ **Persistent Auto-Login:** Once you sign in with your credentials, your session is remembered across browser tabs. No need to log in again.
+* ✅ **Dedicated 1-Click Sign Out:** Header and sidebar logout buttons allow instant sign out and clear session state whenever desired.
+* ✅ **Category Management (Both Render & Cloudflare):** Dedicated **🏷️ Categories** section to create, view, search, and manage product catalog categories.
+* ✅ **Live Camera Vision Feed:** View Live camera monitor with AI HUD and person detection when Online, and animated broadcast **"NO SIGNAL"** screen with SMPTE color bars when Offline.
+* ✅ **Groq Cloud LPU AI Engine (`gsk_...`):** High-speed LLM support for Groq keys starting with `gsk_` running `llama-3.3-70b-versatile` and `llama-3.1-8b-instant`.
 * ✅ **Zero External Dependencies:** `server.js` uses native Node.js (`http`, `fs`, `path`, `crypto`). It installs in 0.1 seconds and starts in 15 milliseconds on Render.
 * ✅ **No College / Project Mentions:** Clean, professional enterprise branding (**AI ADVERTISEMENT ROBOT • ENTERPRISE AI**).
-* ✅ **Dual API Resolution:** Works seamlessly as a standalone Node.js server OR as a static frontend connected to your live Cloudflare backend.
 * ✅ **Guaranteed Login Engine:** Login with `group_1@nttf` will **ALWAYS succeed 100%** and redirect to the dashboard without bouncing back.
 
 ---
@@ -110,7 +116,9 @@ You will be redirected immediately to `admin.html` with full access to:
 * 📦 **Products:** Manage product specifications, pricing, and images.
 * 📢 **Advertisements:** Add bilingual (English + Malayalam) advertisements and click **Play Now** to override schedules.
 * 🎮 **Robot Telemetry & Controls:** Real-time steering (Forward, Reverse, Left, Right) and Emergency Stop controls.
-* 🧠 **xAI Grok Integration:** Connect your Grok API key, select models, and test voice interactions.
+* 🏷️ **Categories:** Manage product categories with live product counters, search filters, and add new category modals.
+* 📷 **Camera Vision:** Live camera feed with active AI tracking HUD when online and animated **NO SIGNAL** broadcast screen when offline.
+* ⚡ **Groq Cloud LPU AI Engine:** Connect your Groq API key (`gsk_...`), select models (`llama-3.3-70b-versatile` or `llama-3.1-8b-instant`), and test AI connection directly.
 
 ---
 

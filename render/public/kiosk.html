@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Public Advertisement Kiosk | NTTF Mechatronics</title>
+  <title>Public Advertisement Kiosk | AI Advertisement Robot</title>
   <link rel="stylesheet" href="src/styles.css">
   <style>
     /* Fullscreen Kiosk specific styling */
@@ -21,8 +21,8 @@
     <div style="display: flex; align-items: center; gap: 14px;">
       <div class="logo-badge" style="width: 32px; height: 32px; font-size: 14px;">🤖</div>
       <div>
-        <h1 style="font-size: 15px; font-weight: 800; color: #fff;" data-i18n="collegeName">Autonomous AI Robot</h1>
-        <span style="font-size: 11px; color: var(--cyan-primary);" data-i18n="deptName">Smart Advertising System</span>
+        <h1 style="font-size: 15px; font-weight: 800; color: #fff;">AI ADVERTISEMENT ROBOT</h1>
+        <span style="font-size: 11px; color: var(--cyan-primary);">ENTERPRISE AUTONOMOUS BROADCAST</span>
       </div>
     </div>
 
@@ -35,8 +35,8 @@
 
       <!-- Robot Hardware Status Pill -->
       <div id="robot-status-badge" class="status-pill">
-        <span id="robot-status-dot" class="status-dot offline"></span>
-        <span id="robot-status-text" data-i18n="robotStatus">Robot Status</span>
+        <span id="robot-status-dot" class="status-dot online"></span>
+        <span id="robot-status-text">Robot Online</span>
       </div>
 
       <!-- Bilingual Language Toggle Button -->
@@ -46,31 +46,44 @@
     </div>
   </header>
 
+  <!-- Kiosk Category Selection Ribbon -->
+  <div class="kiosk-category-bar" style="background: rgba(10, 16, 32, 0.95); border-bottom: 1px solid var(--border-color); padding: 8px 24px; display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; z-index: 20;">
+    <button class="category-chip active" data-cat="">✨ All Categories</button>
+    <button class="category-chip" data-cat="cat_03">💻 Computers &amp; Laptops</button>
+    <button class="category-chip" data-cat="cat_05">⚡ Electronics &amp; Audio</button>
+    <button class="category-chip" data-cat="cat_06">🚗 Automobile &amp; EV</button>
+    <button class="category-chip" data-cat="cat_08">☕ Restaurant &amp; Cafe</button>
+    <button class="category-chip" data-cat="cat_01">🍔 Food &amp; Beverage</button>
+    <button class="category-chip" data-cat="cat_02">🎓 Education &amp; Training</button>
+    <button class="category-chip" data-cat="cat_11">💊 Healthcare &amp; Pharmacy</button>
+    <button class="category-chip" data-cat="cat_20">🎮 Gaming &amp; Esports</button>
+  </div>
+
   <!-- Kiosk Main Presentation Area -->
   <main class="kiosk-main">
     <!-- Left Column: Large Advertisement Poster -->
     <div class="kiosk-poster-col">
-      <img id="kiosk-poster" class="kiosk-poster-img" src="/assets/ads/nttf_mechatronics.svg" alt="Active Advertisement Poster">
+      <img id="kiosk-poster" class="kiosk-poster-img" src="/assets/ads/gaming_laptop.svg" alt="Active Advertisement Poster">
     </div>
 
     <!-- Right Column: Product Information & Live Highlights -->
     <div class="kiosk-info-col">
-      <span id="kiosk-category" class="kiosk-badge">College / Education</span>
-      <h2 id="kiosk-title" class="kiosk-title">NTTF Technical Training Centre</h2>
-      <div id="kiosk-price" class="kiosk-price-tag">₹75,000</div>
+      <span id="kiosk-category" class="kiosk-badge">Computer / Laptop</span>
+      <h2 id="kiosk-title" class="kiosk-title">Titan X-Pro RTX 4070 Workstation</h2>
+      <div id="kiosk-price" class="kiosk-price-tag">₹89,999</div>
       <p id="kiosk-desc" class="kiosk-desc">
-        Join the premier Diploma in Mechatronics Engineering. Hands-on training in Robotics, Embedded IoT, PLC Automation, and guaranteed industrial placement.
+        Unleash maximum creative &amp; computing power. 14th Gen 16-Core Processor, NVIDIA RTX 4070 GPU, and 165Hz QHD color-calibrated display.
       </p>
 
       <ul id="kiosk-features" class="kiosk-features-list">
-        <li>Hands-on Industrial Robotics &amp; AGV Labs</li>
-        <li>Dual Core ESP32-S3 &amp; Embedded AI Architecture</li>
-        <li>100% Practical Industry-Aligned Curriculum</li>
-        <li>Over 95% Verified Campus Placements</li>
+        <li>Intel Core i9 14th Gen • NVIDIA RTX 4070 8GB VRAM</li>
+        <li>32GB High-Speed DDR5 RAM • 1TB Gen4 NVMe SSD</li>
+        <li>165Hz 100% DCI-P3 Color Accurate Display</li>
+        <li>Vapor Chamber Cooling with Dual Quiet Turbofans</li>
       </ul>
 
       <div id="kiosk-promo" style="display: block; padding: 12px 18px; background: rgba(255, 210, 0, 0.1); border: 1px solid #ffd200; border-radius: var(--radius-md); color: #ffd200; font-weight: 700; font-size: 15px;">
-        🎁 Early bird scholarship of ₹10,000 for top entrance rankers.
+        🎁 Free RGB Mechanical Keyboard &amp; Precision Gaming Mouse worth ₹5,999!
       </div>
     </div>
   </main>

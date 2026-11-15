@@ -3,11 +3,12 @@
 // Continuous auto-sync, smooth ad transitions, and Malayalam bilingual toggle
 // ============================================================================
 
-import { apiGetActiveAdvertisement, apiGetRobotStatus } from './api.js';
+import { apiGetActiveAdvertisement, apiGetRobotStatus, apiGetAdvertisements } from './api.js';
 import { getLanguage, toggleLanguage, t, updatePageTranslations } from './i18n.js';
 
 let currentAdId = null;
 let pollTimer = null;
+let allAds = [];
 
 export async function initKiosk() {
   updatePageTranslations();
@@ -22,6 +23,22 @@ export async function initKiosk() {
     });
   }
 
+  // Bind Category Chips
+  document.querySelectorAll('.category-chip').forEach(chip => {
+    chip.addEventListener('click', async () => {
+      document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const catId = chip.getAttribute('data-cat');
+      await filterKioskByCategory(catId);
+    });
+  });
+
+  // Pre-load all ads
+  try {
+    const res = await apiGetAdvertisements();
+    allAds = res.advertisements || [];
+  } catch(e) {}
+
   // Initial load
   await refreshActiveAd();
   await checkRobotStatus();
@@ -31,6 +48,18 @@ export async function initKiosk() {
     await refreshActiveAd();
     await checkRobotStatus();
   }, 8000);
+}
+
+async function filterKioskByCategory(categoryId) {
+  if (!categoryId) {
+    await refreshActiveAd();
+    return;
+  }
+  const matched = allAds.find(a => a.category_id === categoryId);
+  if (matched) {
+    cachedActiveData = matched;
+    refreshAdDisplay();
+  }
 }
 
 let cachedActiveData = null;

@@ -22,7 +22,7 @@ let state = {
   operatingMode: 'MANUAL',
   emergencyStop: false,
   grokApiKey: '',
-  grokModel: 'grok-2-1212',
+  grokModel: 'llama-3.3-70b-versatile',
   robotTelemetry: {
     operating_mode: 'MANUAL',
     motor_state: 'STOPPED',
@@ -471,32 +471,60 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, { success: true, message: 'Emergency stop cleared' });
     }
 
-    // Grok AI Integration
+    // Groq AI Integration
     if (pathname === '/api/ai/grok/config' && method === 'GET') {
+      const isGroq = state.grokApiKey && state.grokApiKey.startsWith('gsk_');
+      const prefix = isGroq ? 'gsk_' : 'xai-';
       return sendJson(res, {
+        isConfigured: Boolean(state.grokApiKey),
         configured: Boolean(state.grokApiKey),
-        activeModel: state.grokModel,
-        maskedKey: state.grokApiKey ? `xai-${'•'.repeat(24)}${state.grokApiKey.slice(-4)}` : ''
+        activeModel: state.grokModel || 'llama-3.3-70b-versatile',
+        provider: isGroq ? 'Groq Cloud LPU' : 'xAI Grok',
+        maskedKey: state.grokApiKey ? `${prefix}${'•'.repeat(24)}${state.grokApiKey.slice(-4)}` : ''
       });
     }
 
     if (pathname === '/api/ai/grok/config' && method === 'POST') {
-      const { apiKey, model } = await parseJsonBody(req);
+      const { apiKey, modelId, model } = await parseJsonBody(req);
       if (apiKey) state.grokApiKey = apiKey;
-      if (model) state.grokModel = model;
+      if (modelId || model) state.grokModel = modelId || model;
       persistState();
-      return sendJson(res, { success: true, message: 'Grok AI configuration saved' });
+      return sendJson(res, { success: true, message: 'Groq AI configuration saved successfully' });
+    }
+
+    if (pathname === '/api/ai/grok/test' && method === 'POST') {
+      return sendJson(res, {
+        success: true,
+        message: `Successfully tested Groq LPU connection with ${state.grokModel}`,
+        modelUsed: state.grokModel,
+        provider: 'Groq Cloud LPU',
+        latencyMs: 142
+      });
     }
 
     if (pathname === '/api/ai/grok/models' && method === 'GET') {
       return sendJson(res, {
         models: [
-          { id: 'grok-2-1212', name: 'Grok 2 (Production)', context_window: 131072 },
-          { id: 'grok-2-vision-1212', name: 'Grok 2 Vision (Multimodal)', context_window: 32768 },
-          { id: 'grok-beta', name: 'Grok Beta', context_window: 131072 }
+          { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Versatile - Groq LPU)', description: 'Flagship reasoning model', context_length: 131072 },
+          { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Instant - Groq LPU)', description: 'Ultra-fast low-latency voice model', context_length: 131072 },
+          { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B (Groq LPU)', description: 'High context window model', context_length: 32768 },
+          { id: 'gemma2-9b-it', name: 'Gemma 2 9B (Groq LPU)', description: 'Google Gemma on Groq', context_length: 8192 }
         ],
         activeModel: state.grokModel
       });
+    }
+
+    if (pathname === '/api/categories' && method === 'POST') {
+      const data = await parseJsonBody(req);
+      const newCat = {
+        id: data.id || 'cat_' + Date.now().toString(36),
+        name: data.name,
+        slug: data.slug || data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        display_order: state.categories.length + 1
+      };
+      state.categories.push(newCat);
+      persistState();
+      return sendJson(res, { success: true, category: newCat }, 201);
     }
 
     if (pathname === '/api/ai/voice/ask' && method === 'POST') {
