@@ -1410,22 +1410,117 @@ a:hover {
     max-height: 48vh !important;
   }
 
-  /* Smooth Touch-Scrolling Tables */
+  /* Mobile Table Responsive & Card Engine */
   .table-responsive {
     display: block !important;
     width: 100% !important;
+    margin-top: 10px !important;
+  }
+
+  /* When table is a mobile card table, transform rows into sleek touch cards */
+  .mobile-cards-table {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    border: none !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+  }
+  .mobile-cards-table thead {
+    display: none !important;
+  }
+  .mobile-cards-table tbody {
+    display: block !important;
+    width: 100% !important;
+  }
+  .mobile-cards-table tr {
+    display: block !important;
+    width: 100% !important;
+    background: rgba(15, 23, 42, 0.85) !important;
+    border: 1px solid rgba(0, 240, 255, 0.22) !important;
+    border-radius: 12px !important;
+    padding: 14px 16px !important;
+    margin-bottom: 14px !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35) !important;
+    box-sizing: border-box !important;
+    transition: transform 0.15s ease, border-color 0.15s ease !important;
+  }
+  .mobile-cards-table tr:active {
+    border-color: var(--cyan-primary, #00f0ff) !important;
+  }
+  .mobile-cards-table td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 9px 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    white-space: normal !important;
+    font-size: 13px !important;
+    box-sizing: border-box !important;
+    text-align: right !important;
+  }
+  .mobile-cards-table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: #94a3b8;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-right: 12px;
+    flex-shrink: 0;
+    text-align: left;
+  }
+  /* Card Header Row (Item Icon / Thumbnail & Title) */
+  .mobile-cards-table td:first-child {
+    border-bottom: 1px solid rgba(0, 240, 255, 0.28) !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 6px !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+  }
+  .mobile-cards-table td:first-child::before {
+    display: none !important;
+  }
+  /* Card Footer Row (Action Buttons) */
+  .mobile-cards-table td:last-child {
+    border-bottom: none !important;
+    padding-top: 12px !important;
+    margin-top: 4px !important;
+    justify-content: stretch !important;
+  }
+  .mobile-cards-table td:last-child::before {
+    display: none !important;
+  }
+  .mobile-cards-table .mobile-action-buttons {
+    display: flex !important;
+    gap: 8px !important;
+    width: 100% !important;
+    flex-wrap: wrap !important;
+  }
+  .mobile-cards-table .mobile-action-buttons .btn {
+    flex: 1 1 auto !important;
+    min-height: 38px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 6px 12px !important;
+  }
+
+  /* Fallback scroll for standard non-card tables */
+  .table-responsive:not(:has(.mobile-cards-table)) {
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
     border-radius: 8px !important;
     border: 1px solid var(--border-color) !important;
-    margin-top: 10px !important;
   }
-  .table-responsive table {
+  .table-responsive table:not(.mobile-cards-table) {
     min-width: 580px !important;
     width: 100% !important;
   }
-  .table-responsive th,
-  .table-responsive td {
+  .table-responsive table:not(.mobile-cards-table) th,
+  .table-responsive table:not(.mobile-cards-table) td {
     white-space: nowrap !important;
     padding: 10px 12px !important;
     font-size: 13px !important;

@@ -728,25 +728,25 @@ function renderProductsTable() {
       <td>
         <div style="display: flex; align-items: center; gap: 12px;">
           ${p.image_url 
-            ? `<img src="${p.image_url}" alt="${p.name}" style="width: 44px; height: 44px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border-color);" onerror="this.outerHTML='<div style=\\'width:44px;height:44px;border-radius:6px;background:rgba(0,240,255,0.1);border:1px solid var(--border-color);display:flex;align-items:center;justify-content:center;font-size:20px;\\'>📦</div>'">` 
+            ? `<img src="${p.image_url}" alt="${escapeHtml(p.name)}" style="width: 44px; height: 44px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border-color);" onerror="this.outerHTML='<div style=\\'width:44px;height:44px;border-radius:6px;background:rgba(0,240,255,0.1);border:1px solid var(--border-color);display:flex;align-items:center;justify-content:center;font-size:20px;\\'>📦</div>'">` 
             : `<div style="width: 44px; height: 44px; border-radius: 6px; background: rgba(0, 240, 255, 0.1); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 20px;">📦</div>`
           }
           <div>
-            <strong style="color: #fff; font-size: 14px;">${p.name}</strong>
+            <strong style="color: #fff; font-size: 14px;">${escapeHtml(p.name)}</strong>
             <br>
-            <small style="color: var(--cyan-primary);">${p.brand || 'Enterprise'}</small>
+            <small style="color: var(--cyan-primary);">${escapeHtml(p.brand || 'Enterprise')}</small>
           </div>
         </div>
       </td>
-      <td><span class="status-pill">${p.category_name || 'General'}</span></td>
-      <td style="color:#ffd200; font-weight:700;">${p.price ? '₹' + Number(p.price).toLocaleString('en-IN') : 'N/A'}</td>
-      <td><span style="font-size:12px; color:var(--text-muted);">${(p.description || '').slice(0, 60)}${(p.description || '').length > 60 ? '...' : ''}</span></td>
-      <td><span class="status-pill" style="border-color: rgba(0, 230, 118, 0.4); color: #00e676;">${p.availability || 'In Stock'}</span></td>
-      <td>
-        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-          <button class="btn btn-primary btn-sm" onclick="createAdFromProduct('${p.id}')" title="Create Advertisement from this Product" style="padding: 4px 8px; font-size: 11px;">📢 Make Ad</button>
+      <td data-label="Category"><span class="status-pill">${escapeHtml(p.category_name || 'General')}</span></td>
+      <td data-label="Price" style="color:#ffd200; font-weight:700;">${p.price ? '₹' + Number(p.price).toLocaleString('en-IN') : 'N/A'}</td>
+      <td data-label="Description"><span style="font-size:12px; color:var(--text-muted);">${escapeHtml((p.description || '').slice(0, 60))}${(p.description || '').length > 60 ? '...' : ''}</span></td>
+      <td data-label="Stock Status"><span class="status-pill" style="border-color: rgba(0, 230, 118, 0.4); color: #00e676;">${escapeHtml(p.availability || 'In Stock')}</span></td>
+      <td data-label="Actions">
+        <div class="mobile-action-buttons">
+          <button class="btn btn-primary btn-sm" onclick="createAdFromProduct('${p.id}')" title="Create Advertisement from this Product">📢 Make Ad</button>
           <button class="btn btn-secondary btn-sm" onclick="editProduct('${p.id}')">✏️ Edit</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}', '${(p.name || 'product').replace(/'/g, "\\'")}')">🗑️ Delete</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}', '${escapeHtml(p.name || 'product').replace(/'/g, "\\'")}')">🗑️ Delete</button>
         </div>
       </td>
     </tr>
@@ -1090,24 +1090,24 @@ function renderAdsTable() {
             : `<div style="width:44px; height:44px; border-radius:6px; background:rgba(0,240,255,0.1); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; font-size:20px;">📢</div>`
           }
           <div>
-            <strong style="color: #fff; font-size: 14px;">${ad.title}</strong>
-            ${ad.short_desc ? `<br><small style="color: var(--text-dim);">${ad.short_desc.slice(0, 50)}</small>` : ''}
+            <strong style="color: #fff; font-size: 14px;">${escapeHtml(ad.title)}</strong>
+            ${ad.short_desc ? `<br><small style="color: var(--text-dim);">${escapeHtml(ad.short_desc.slice(0, 50))}</small>` : (ad.price ? `<br><small style="color: var(--cyan-primary);">₹${ad.price}</small>` : '')}
           </div>
         </div>
       </td>
-      <td><span class="status-pill">${ad.category_name || 'General'}</span></td>
-      <td>Priority ${ad.priority || 2}</td>
-      <td>Page ${ad.display_page_id || 1}</td>
-      <td><span class="status-pill ${ad.status === 'active' ? 'online' : 'offline'}">${(ad.status || 'SCHEDULED').toUpperCase()}</span></td>
-      <td>
-        <div style="display: flex; gap: 6px; align-items: center;">
+      <td data-label="Category"><span class="status-pill">${escapeHtml(ad.category_name || 'General')}</span></td>
+      <td data-label="DWIN Screen"><span class="status-pill" style="border-color: rgba(0,240,255,0.3); color:#00f0ff;">${parseInt(ad.display_page_id) === 1 || !ad.display_page_id ? 'Page 1 (Primary)' : 'Page ' + ad.display_page_id}</span></td>
+      <td data-label="Priority"><span class="status-pill">${ad.priority === 3 ? '🔴 Urgent' : (ad.priority === 2 ? '🟡 High' : '⚪ Normal')}</span></td>
+      <td data-label="Status"><span class="status-pill ${ad.status === 'active' ? 'online' : (ad.status === 'paused' ? 'warning' : 'offline')}">${(ad.status || 'SCHEDULED').toUpperCase()}</span></td>
+      <td data-label="Actions">
+        <div class="mobile-action-buttons">
           <button class="btn btn-primary btn-sm" onclick="playNow('${ad.id}')">▶ Play</button>
           ${ad.status === 'active' 
-            ? `<button class="btn btn-secondary btn-sm" onclick="pauseAd('${ad.id}')">⏸</button>` 
-            : `<button class="btn btn-secondary btn-sm" onclick="resumeAd('${ad.id}')">▶</button>`
+            ? `<button class="btn btn-secondary btn-sm" onclick="pauseAd('${ad.id}')">⏸ Pause</button>` 
+            : `<button class="btn btn-secondary btn-sm" onclick="resumeAd('${ad.id}')">▶ Resume</button>`
           }
-          <button class="btn btn-secondary btn-sm" onclick="editAd('${ad.id}')">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteAd('${ad.id}', '${(ad.title || 'ad').replace(/'/g, "\\'")}')">🗑️</button>
+          <button class="btn btn-secondary btn-sm" onclick="editAd('${ad.id}')">✏️ Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteAd('${ad.id}', '${escapeHtml(ad.title || 'ad').replace(/'/g, "\\'")}')">🗑️ Delete</button>
         </div>
       </td>
     </tr>
@@ -1433,20 +1433,19 @@ function renderSchedulesTable() {
             </div>
           </div>
         </td>
-        <td><span class="status-pill">${parseInt(s.display_page_id) === 1 || !s.display_page_id ? 'Page 1 (Primary)' : 'Page ' + s.display_page_id}</span></td>
-        <td><strong style="color:#fff;">${s.start_time || '09:00'}</strong></td>
-        <td><strong style="color:#fff;">${s.end_time || '21:00'}</strong></td>
-        <td>${(!s.duration_sec || parseInt(s.duration_sec) === 0 || parseInt(s.duration_sec) >= 86400) ? '<span class="badge" style="background:rgba(0, 240, 255, 0.12); border:1px solid #00f0ff; color:#00f0ff; font-weight:700;">⭐ Full Time (Until End)</span>' : `${s.duration_sec}s loop`}</td>
-        <td><span style="font-size:12px; color:var(--text-dim);">${s.days || 'Every Day'}</span></td>
-        <td>
+        <td data-label="DWIN Screen"><span class="status-pill">${parseInt(s.display_page_id) === 1 || !s.display_page_id ? 'Page 1 (Primary)' : 'Page ' + s.display_page_id}</span></td>
+        <td data-label="Playback Window"><strong style="color:#fff;">${s.start_time || '09:00'} - ${s.end_time || '21:00'}</strong></td>
+        <td data-label="Duration">${(!s.duration_sec || parseInt(s.duration_sec) === 0 || parseInt(s.duration_sec) >= 86400) ? '<span class="badge" style="background:rgba(0, 240, 255, 0.12); border:1px solid #00f0ff; color:#00f0ff; font-weight:700;">⭐ Full Time (Until End)</span>' : `${s.duration_sec}s loop`}</td>
+        <td data-label="Days"><span style="font-size:12px; color:var(--text-dim);">${escapeHtml(s.days || 'Every Day')}</span></td>
+        <td data-label="Status">
           <button class="btn btn-sm ${isActive ? 'btn-secondary' : 'btn-secondary'}" style="${isActive ? 'border-color: rgba(0,240,255,0.4); color: var(--cyan-primary);' : 'opacity: 0.6;'}" onclick="window.toggleSchedule('${s.id}')">
             ${isActive ? '🟢 Active' : '⚪ Paused'}
           </button>
         </td>
-        <td>
-          <div style="display: flex; gap: 6px;">
-            <button class="btn btn-secondary btn-sm" onclick="window.editSchedule('${s.id}')" title="Edit Schedule">✏️</button>
-            <button class="btn btn-danger btn-sm" onclick="window.deleteSchedule('${s.id}')" title="Delete Schedule">🗑️</button>
+        <td data-label="Actions">
+          <div class="mobile-action-buttons">
+            <button class="btn btn-secondary btn-sm" onclick="window.editSchedule('${s.id}')" title="Edit Schedule">✏️ Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="window.deleteSchedule('${s.id}')" title="Delete Schedule">🗑️ Delete</button>
           </div>
         </td>
       </tr>
@@ -1793,16 +1792,38 @@ async function loadLogs() {
 
     tbody.innerHTML = res.logs.map(l => `
       <tr>
-        <td style="font-size:12px; color:var(--text-dim);">${new Date(l.created_at).toLocaleString()}</td>
-        <td><strong>${l.actor}</strong></td>
-        <td><span class="status-pill">${l.action}</span></td>
-        <td><small>${l.details || ''}</small></td>
+        <td data-label="Timestamp" style="font-size:12px; color:var(--text-dim);">${new Date(l.created_at).toLocaleString()}</td>
+        <td data-label="Actor"><strong>${escapeHtml(l.actor || 'System')}</strong></td>
+        <td data-label="Action"><span class="status-pill">${escapeHtml(l.action || 'INFO')}</span></td>
+        <td data-label="Details" style="word-break: break-word;"><small style="color: #cbd5e1;">${escapeHtml(l.details || '')}</small></td>
       </tr>
     `).join('');
   } catch (err) {
     console.error('Error loading logs:', err);
   }
 }
+
+// ----------------------------------------------------------------------------
+// Multi-Device Real-Time Sync Loop (Laptop <-> Mobile)
+// Automatically keeps products, ads, schedules, and logs updated across all open devices
+// ----------------------------------------------------------------------------
+setInterval(() => {
+  if (document.hidden) return;
+  if (activeSection === 'products') loadProducts();
+  else if (activeSection === 'advertisements') loadAdvertisements();
+  else if (activeSection === 'schedule') loadSchedulesView();
+  else if (activeSection === 'logs') loadLogs();
+}, 10000);
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    pollTelemetry();
+    if (activeSection === 'products') loadProducts();
+    else if (activeSection === 'advertisements') loadAdvertisements();
+    else if (activeSection === 'schedule') loadSchedulesView();
+    else if (activeSection === 'logs') loadLogs();
+  }
+});
 
 // Modal Helpers exposed globally
 window.openModal = (id) => {

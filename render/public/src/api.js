@@ -148,13 +148,17 @@ export function setAdminToken(token) {
   }
 }
 
+const CF_API_BASE = 'https://advertising-robot.muhammedmarseen378.workers.dev/api';
+const RENDER_API_BASE = 'https://ai-advertising-robot-8.onrender.com/api';
+
 export function clearAdminSession() {
   localStorage.removeItem('admin_token');
   sessionStorage.removeItem('admin_token');
 }
 
 /**
- * Generic Fetch Wrapper with automatic fallback
+ * Generic Fetch Wrapper with automatic dual-backend failover
+ * Ensures laptop and mobile always hit the active cloud backend
  */
 async function apiRequest(endpoint, options = {}) {
   const token = getAdminToken();
@@ -169,45 +173,53 @@ async function apiRequest(endpoint, options = {}) {
     headers
   };
 
-  try {
-    const base = getApiBase();
-    let res = await fetch(`${base}${endpoint}`, config);
+  const primaryBase = getApiBase();
+  const candidates = [primaryBase];
+  if (!candidates.includes(CF_API_BASE)) candidates.push(CF_API_BASE);
+  if (!candidates.includes(RENDER_API_BASE)) candidates.push(RENDER_API_BASE);
 
-    // If 404 on current host, try fallback to cloudflare worker
-    if (res.status === 404 && !base.includes('workers.dev')) {
-      const fallbackUrl = `https://advertising-robot.muhammedmarseen378.workers.dev/api${endpoint}`;
-      try {
-        res = await fetch(fallbackUrl, config);
-      } catch (e) {
-        // Fallback fetch failed
+  let lastError = null;
+
+  for (const base of candidates) {
+    try {
+      const url = `${base}${endpoint}`;
+      const res = await fetch(url, config);
+
+      // If server returned 404 or 5xx, try next candidate
+      if (res.status === 404 || res.status >= 500) {
+        lastError = new Error(`HTTP ${res.status} from ${base}`);
+        continue;
       }
-    }
-    
-    // Only kick user to login if they do not hold an authorized session token
-    if (res.status === 401 && !endpoint.includes('/auth/login')) {
-      if (!token || !token.startsWith('admin_session_')) {
-        clearAdminSession();
-        if (window.location.pathname.includes('admin')) {
-          window.location.href = 'login.html';
+
+      // Only kick user to login if they do not hold an authorized session token
+      if (res.status === 401 && !endpoint.includes('/auth/login')) {
+        if (!token || !token.startsWith('admin_session_')) {
+          clearAdminSession();
+          if (typeof window !== 'undefined' && window.location.pathname.includes('admin')) {
+            window.location.href = 'login.html';
+          }
         }
       }
-    }
 
-    const contentType = res.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || `HTTP ${res.status}: ${res.statusText}`);
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || `HTTP ${res.status}: ${res.statusText}`);
+        }
+        return data;
       }
-      return data;
-    }
 
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    return await res.text();
-  } catch (err) {
-    console.warn(`API [${endpoint}] fallback triggered:`, err.message);
-    throw err;
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      return await res.text();
+    } catch (err) {
+      lastError = err;
+      // Continue to next cloud candidate
+    }
   }
+
+  console.warn(`API [${endpoint}] all candidates failed, fallback triggered:`, lastError?.message);
+  throw lastError || new Error(`All backend candidates failed for ${endpoint}`);
 }
 
 // -------------------------------------------------------------
