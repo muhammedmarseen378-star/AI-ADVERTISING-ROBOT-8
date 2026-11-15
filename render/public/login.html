@@ -92,7 +92,7 @@
 
     // Pre-populate API base URL
     apiUrlInput.value = getApiBase();
-    if (window.location.protocol === 'file:' || !getApiBase() || getApiBase() === '/api') {
+    if (window.location.protocol === 'file:') {
       apiUrlInput.style.display = 'block';
     }
 
